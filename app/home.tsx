@@ -166,7 +166,10 @@ const Activitys=[
                 details={club.details}
                 rating={club.rating}
                 imageUrl={club.imageUrl}
-                onPress={() => console.log('Pressed', club.title)}
+               onPress={() => router.push({
+                 pathname: '/(tabs)/ActivityDetails/1',
+                 params: { id: club.id }
+               })}
               />
             ))}
           </View>
