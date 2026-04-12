@@ -7,7 +7,10 @@ type ClubCardProps = {
   details: string;
   rating: string | number;
   imageUrl?: string;
-  onPress?: () => void;
+ onPress={() => router.push({
+   pathname: '/(tabs)/ActivityDetails/1',
+   params: { id: String(index + 1) }
+ })};
 };
 
 const ClubsCard = ({ title, details, rating, imageUrl, onPress }: ClubCardProps) => {
