@@ -14,10 +14,20 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      <Stack
+        screenOptions={{
+          headerShown: false, 
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="edit-parent-profile" />
+        <Stack.Screen name="child-management" />
+        <Stack.Screen name="child-list" />
+        <Stack.Screen name="add-child" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
+
       <StatusBar style="auto" />
     </ThemeProvider>
   );
