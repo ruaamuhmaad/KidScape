@@ -1,17 +1,13 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ImageBackground, ScrollView } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router } from '@/.expo/types/router';
 
 type ActivityCardProps = {
   title: string;
   location: string;
   rating: string | number;
   imageUrl?: string;
-  onPress={() => router.push({
-    pathname: '/(tabs)/ActivityDetails/1',
-    params: { id: activity.id }
-  })}
+  onPress: () => void;
 };
 
 const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCardProps) => {
