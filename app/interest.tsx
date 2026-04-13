@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ActivityCard from '@/components/ActivityCard';
+import FilterModal from '@/components/FilterModal';
 
 const descriptionMap: Record<string, string> = {
   Sport: 'Encourages physical fitness through fun activities, promoting teamwork, coordination, and overall well-being.',
@@ -59,6 +60,8 @@ const InterestPage = () => {
   const searchParams = useSearchParams();
   const interest = searchParams.get('interest') || 'Sport';
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterVisible, setFilterVisible] = useState(false);
+const [filters, setFilters] = useState<any>({});
 
   const description = descriptionMap[interest] || 'Explore recommended activities for this interest.';
 
@@ -87,17 +90,24 @@ const InterestPage = () => {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={18} color="#728293" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="your search"
-          placeholderTextColor="#728293"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <MaterialIcons name="tune" size={18} color="#728293" />
-      </View>
+    <View style={styles.searchContainer}>
+  <MaterialIcons name="search" size={18} color="#728293" />
+
+  <TextInput
+    style={styles.searchInput}
+    placeholder="your search"
+    placeholderTextColor="#728293"
+    value={searchQuery}
+    onChangeText={setSearchQuery}
+  />
+
+  <MaterialIcons
+    name="tune"
+    size={20}
+    color="#728293"
+    onPress={() => setFilterVisible(true)}
+  />
+</View>
 
       <Text style={styles.subTitle}>Description Interest</Text>
       <Text style={styles.description}>{description}</Text>
@@ -118,7 +128,13 @@ const InterestPage = () => {
         ) : (
           <Text style={styles.emptyText}>No activities match your search.</Text>
         )}
+        <FilterModal
+  visible={filterVisible}
+  onClose={() => setFilterVisible(false)}
+  onApply={(data:any) => setFilters(data)}
+/>
       </View>
+      
     </ScrollView>
   );
 };
