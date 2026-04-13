@@ -3,6 +3,7 @@ import { Pressable, View, Text, StyleSheet, ImageBackground, ScrollView } from '
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 type ActivityCardProps = {
+  id?: string | number;
   title: string;
   location: string;
   rating: string | number;
