@@ -1,14 +1,16 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAZUurmEq2PEEXHzzcPAb9eLjpsvPMtcpU",
+  apiKey: "AIzaSyAELadlP3Bh5cT6qET8cG8q7_QW6q3DCQc",
   authDomain: "kidscape-6ac7b.firebaseapp.com",
   projectId: "kidscape-6ac7b",
   storageBucket: "kidscape-6ac7b.firebasestorage.app",
   messagingSenderId: "270750415295",
-  appId: "1:270750415295:android:6a9e1c2a746ecd63b8c90a"
+  appId: "1:270750415295:web:35079669f127a357b8c90a",
+  measurementId: "G-38KV7462H4"
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+const analytics = getAnalytics(app);
+export default app;
