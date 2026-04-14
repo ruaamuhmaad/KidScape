@@ -13,7 +13,7 @@ type ClubCardProps = {
   details: string;
   rating: string | number;
   imageUrl?: string;
-  onPress: () => void;
+ onPress: () => void;
 };
 
 const ClubsCard = ({
