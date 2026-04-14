@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import ActivityCard from '@/components/ActivityCard';
 import ClubsCard from '@/components/clubsCard';
 import FilterModal from '@/components/FilterModal';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,18 +22,21 @@ const HomePage = () => {
 
   const Activitys = [
     {
+      id: '1',
       title: 'football',
       location: 'Nablus - Aibal Sports Club',
       rating: '3.8',
       imageUrl: 'https://i.pinimg.com/1200x/4b/79/d6/4b79d64a2c7f680eab3b32754613110f.jpg',
     },
     {
+      id: '2',
       title: 'Swimming Lessons',
       location: 'Nablus-hayat nablus',
       rating: '4.2',
       imageUrl: 'https://i.pinimg.com/1200x/a6/d2/32/a6d2323d7718377c2711dfab1358bfb6.jpg',
     },
     {
+      id: '3',
       title: 'Cycling Adventure',
       location: 'Nablus-jamal Abdel Nasser Street',
       rating: '3.2',
@@ -42,12 +46,14 @@ const HomePage = () => {
 
   const Clubs = [
     {
+      id: '1',
       title: 'Youth of Tomorrow Organization',
       details: 'Nablus -All activities',
       rating: '4.5',
       imageUrl: 'https://i.pinimg.com/736x/06/66/98/0666982525812d60b419307d7415c689.jpg',
     },
     {
+      id: '2',
       title: 'Equestrian Club',
       details: 'jenin-Horse riding activity',
       rating: '2.5',
@@ -55,7 +61,6 @@ const HomePage = () => {
     },
   ];
 
-  // FILTER ACTIVITIES
   const filteredActivities = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return Activitys;
@@ -79,8 +84,9 @@ const HomePage = () => {
 
   return (
     <ScrollView style={styles.safeArea}>
+      <SafeAreaView>
       <Text style={styles.title}>Home Page</Text>
-
+</SafeAreaView>
       <View style={styles.container}>
 
         {/* HEADER */}
@@ -94,7 +100,6 @@ const HomePage = () => {
           </View>
         </View>
 
-        {/* SEARCH BAR + FILTER */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
             <TextInput
@@ -114,7 +119,6 @@ const HomePage = () => {
           </View>
         </View>
 
-        {/* INTERESTS */}
         <Text style={styles.sectionTitle}>Common Interests</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {Data.map((item, index) => (
@@ -130,26 +134,55 @@ const HomePage = () => {
           ))}
         </ScrollView>
 
-        {/* ACTIVITIES */}
         <Text style={styles.sectionTitle}>Recommended Activities</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filteredActivities.map((item, index) => (
-            <ActivityCard key={index} {...item} />
+            <ActivityCard
+              key={item.id ?? index}
+              {...item}
+              onPress={() => router.push(`/ActivityDetails/${item.id}`)}
+            />
           ))}
         </ScrollView>
 
-        {/* CLUBS */}
-        <Text style={styles.sectionTitle}>Top Clubs</Text>
-        {filteredClubs.map((item, index) => (
-          <ClubsCard key={index} {...item} />
-        ))}
+        <View style={styles.safeArea}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Top-Best clubs in palestine</Text>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/topclubs',
+                  params: { clubs: JSON.stringify(Clubs) },
+                })
+              }
+              style={styles.viewAllButton}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+            </Pressable>
+          </View>
+          <View>
+            {filteredClubs.map((club, index) => (
+              <ClubsCard
+                key={club.id ?? index}
+                title={club.title}
+                details={club.details}
+                rating={club.rating}
+                imageUrl={club.imageUrl}
+                onPress={() =>
+  router.push({
+    pathname: '/club-details',
+    params: { id: club.id },
+  })
+}
+              />
+            ))}
+          </View>
+        </View>
       </View>
-
-      {/* FILTER MODAL */}
       <FilterModal
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}
-        onApply={(filters) => {
+        onApply={(filters: any) => {
           console.log('Filters:', filters);
         }}
       />
@@ -210,9 +243,10 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
     marginVertical: 10,
+    padding:14,
     color: '#183B4E',
   },
 
@@ -226,6 +260,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   interestCardLabel: {
+    fontWeight: 'bold',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  viewAllButton: {
+    padding: 8,
+  },
+  viewAllText: {
+    color: '#235671',
     fontWeight: 'bold',
   },
 });
