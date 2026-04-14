@@ -8,10 +8,7 @@ type ActivityCardProps = {
   location: string;
   rating: string | number;
   imageUrl?: string;
-  onPress={() => router.push({
-    pathname: '/(tabs)/ActivityDetails/1',
-    params: { id: activity.id }
-  })}
+ onPress: () => void;
 };
 
 const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCardProps) => {

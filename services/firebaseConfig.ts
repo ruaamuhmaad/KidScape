@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAELadlP3Bh5cT6qET8cG8q7_QW6q3DCQc",
@@ -8,9 +8,9 @@ const firebaseConfig = {
   storageBucket: "kidscape-6ac7b.firebasestorage.app",
   messagingSenderId: "270750415295",
   appId: "1:270750415295:web:35079669f127a357b8c90a",
-  measurementId: "G-38KV7462H4"
+  measurementId: "G-38KV7462H4",
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+export const db = getFirestore(app);
 export default app;

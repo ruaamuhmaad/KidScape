@@ -137,7 +137,10 @@ const Activitys=[
                 location={activity.location}
                 rating={activity.rating}
                 imageUrl={activity.imageUrl}
-                onPress={() => console.log('Pressed', activity.title)}
+                 onPress={() => router.push(
+                     '/ActivityDetails/1'
+                    /* `/ActivityDetails/${index + 1}`*/
+                     )}
               />
             ))}
           </ScrollView>
@@ -167,7 +170,8 @@ const Activitys=[
                 rating={club.rating}
                 imageUrl={club.imageUrl}
                onPress={() => router.push({
-                 pathname: '/(tabs)/ActivityDetails/1',
+                 pathname: '/ActivityDetails/1',
+                /*onPress={() => router.push(`/ActivityDetails/${item.id}`)}"*/
                  params: { id: club.id }
                })}
               />
