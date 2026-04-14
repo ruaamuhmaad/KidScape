@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ImageBackground, ScrollView } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router } from '@/.expo/types/router';
 
 type ActivityCardProps = {
+  id?: string | number;
   title: string;
   location: string;
   rating: string | number;
