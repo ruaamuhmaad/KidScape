@@ -2,10 +2,16 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import OverviewIcon from "./OverviewIcon";
 
-export default function OverviewTab({ activity }) {
+import type { ActivityDetailsRecord, ActivityOverviewItem } from "./types";
+
+type OverviewTabProps = {
+  activity: ActivityDetailsRecord;
+};
+
+export default function OverviewTab({ activity }: OverviewTabProps) {
   return (
     <View style={styles.tabContent}>
-      {activity.overview.map((item, i) => (
+      {activity.overview.map((item: ActivityOverviewItem, i: number) => (
         <View key={i} style={styles.overviewRow}>
           <View style={styles.iconBox}>
             <OverviewIcon name={item.icon} />

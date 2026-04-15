@@ -1,7 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-export default function DetailsTab({ activity }) {
+import type { ActivityDetailsRecord } from "./types";
+
+type DetailsTabProps = {
+  activity: ActivityDetailsRecord;
+};
+
+export default function DetailsTab({ activity }: DetailsTabProps) {
   return (
     <View style={styles.tabContent}>
       <Text style={styles.sectionLabel}>About</Text>
@@ -15,7 +21,7 @@ export default function DetailsTab({ activity }) {
       </Text>
 
       <View style={styles.amenitiesGrid}>
-        {activity.details.amenities.map((item, i) => (
+        {activity.details.amenities.map((item: string, i: number) => (
           <View key={i} style={styles.amenityChip}>
             <Text style={styles.amenityChipText}>{item}</Text>
           </View>

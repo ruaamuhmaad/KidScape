@@ -61,7 +61,6 @@ const InterestPage = () => {
   const interest = searchParams.get('interest') || 'Sport';
   const [searchQuery, setSearchQuery] = useState('');
   const [filterVisible, setFilterVisible] = useState(false);
-const [filters, setFilters] = useState<any>({});
 
   const description = descriptionMap[interest] || 'Explore recommended activities for this interest.';
 
@@ -128,10 +127,10 @@ const [filters, setFilters] = useState<any>({});
         ) : (
           <Text style={styles.emptyText}>No activities match your search.</Text>
         )}
-        <FilterModal
+<FilterModal
   visible={filterVisible}
   onClose={() => setFilterVisible(false)}
-  onApply={(data:any) => setFilters(data)}
+  onApply={() => setFilterVisible(false)}
 />
       </View>
       

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  type KeyboardTypeOptions,
   View,
   Text,
   TextInput,
@@ -11,12 +12,24 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import type { ComponentProps } from "react";
+
+type InputFieldProps = {
+  icon: ComponentProps<typeof Ionicons>["name"];
+  placeholder: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  keyboardType?: KeyboardTypeOptions;
+  multiline?: boolean;
+  height?: number;
+};
 
 export default function BookingFormScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const activity = params.activity || "Sport Village";
+  const activityParam = Array.isArray(params.activity) ? params.activity[0] : params.activity;
+  const activity = activityParam ?? "Sport Village";
 
   const [parentName, setParentName] = useState("");
   const [phone, setPhone] = useState("");
@@ -34,7 +47,7 @@ export default function BookingFormScreen() {
     }
 
     router.push({
-      pathname: "/(tabs)/booking-submitted",
+      pathname: "/booking-submitted",
       params: {
         activity,
         parentName,
@@ -158,7 +171,7 @@ function InputField({
   keyboardType = "default",
   multiline = false,
   height = 54,
-}) {
+}: InputFieldProps) {
   return (
     <View style={[styles.inputWrapper, multiline && { height }]}>
       <Ionicons name={icon} size={18} color="#94A3B8" style={styles.inputIcon} />

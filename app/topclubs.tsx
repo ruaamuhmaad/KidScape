@@ -15,7 +15,7 @@ const TopClubsPage = () => {
     if (!clubs) return [];
     try {
       return JSON.parse(clubs);
-    } catch (error) {
+    } catch {
       return [];
     }
   }, [clubs]);
