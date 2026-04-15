@@ -8,7 +8,7 @@ type ActivityCardProps = {
   location: string;
   rating: string | number;
   imageUrl?: string;
-  onPress: () => void;
+ onPress: () => void;
 };
 
 const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCardProps) => {

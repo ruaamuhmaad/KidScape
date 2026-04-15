@@ -1,11 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function ProfileHeader() {
+type ProfileHeaderProps = {
+  name?: string;
+  imageUrl?: string;
+};
+
+export default function ProfileHeader({
+  name = "Parent Name",
+  imageUrl,
+}: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color="#1E3A46" />
@@ -13,16 +20,18 @@ export default function ProfileHeader() {
 
         <Text style={styles.title}>Profile</Text>
 
-        {/* spacer عشان يظل العنوان بالنص */}
         <View style={styles.spacer} />
       </View>
 
-      {/* Avatar */}
       <View style={styles.avatar}>
-        <Ionicons name="person" size={60} color="#1E3A46" />
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
+        ) : (
+          <Ionicons name="person" size={60} color="#1E3A46" />
+        )}
       </View>
 
-      <Text style={styles.name}>Parent Name</Text>
+      <Text style={styles.name}>{name}</Text>
     </View>
   );
 }
@@ -51,7 +60,7 @@ const styles = StyleSheet.create({
   },
 
   spacer: {
-    width: 20, // نفس حجم السهم تقريباً للمحافظة على التوسيط
+    width: 20,
   },
 
   avatar: {
@@ -62,6 +71,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
+    overflow: "hidden",
+  },
+
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
 
   name: {

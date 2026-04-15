@@ -4,12 +4,12 @@ import { router } from "expo-router";
 import { type ComponentProps, useState } from "react";
 
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const CITY_OPTIONS = ["Jerusalem", "Ramallah", "Nablus", "Hebron", "Bethlehem"];
@@ -45,7 +45,7 @@ export default function AddChildScreen() {
       <ProfileHeader />
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>My first child</Text>
+        <Text style={styles.sectionTitle}>My child</Text>
 
         {/* Full name */}
         <Text style={styles.label}>Full name</Text>
@@ -173,7 +173,7 @@ export default function AddChildScreen() {
         <View style={styles.buttonsRow}>
             
           <TouchableOpacity style={styles.cancelBtn}
-            onPress={() => router.push("/child-management")}>
+            onPress={() => router.push("/child-list")}>
             <Text style={styles.cancelText}>cancel</Text>
           </TouchableOpacity>
 
