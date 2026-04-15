@@ -17,7 +17,11 @@ import OverviewTab from "@/components/activity-details/OverviewTab";
 import DetailsTab from "@/components/activity-details/DetailsTab";
 import CostsTab from "@/components/activity-details/CostsTab";
 import ActivityTabs from "@/components/activity-details/ActivityTabs";
-import { getActivityById } from "@/services/activityService";
+import type {
+  ActivityDetailsRecord,
+  ActivityTabName,
+} from "@/components/activity-details/types";
+import { getActivityById } from "@/firebase";
 
 const BLUE = "#2C6E8A";
 const DARK = "#1a1a1a";
@@ -26,8 +30,8 @@ export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("Overview");
-  const [activity, setActivity] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
+  const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   const activityId = Array.isArray(id) ? id[0] : id;
@@ -135,7 +139,7 @@ export default function ActivityDetailsScreen() {
           style={styles.registerButton}
           onPress={() =>
             router.push({
-              pathname: "/(tabs)/booking-form",
+              pathname: "/booking-form",
               params: {
                 activity: activity.title,
                 activityId: activity.id,

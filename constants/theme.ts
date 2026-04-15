@@ -1,25 +1,24 @@
 
-
-import { Background } from '@react-navigation/elements';
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const Colors = {
-  Background:{
-Colors:  '#fff',
+  Background: {
+    Colors: '#fff',
   },
   light: {
     text: '#11181C',
     background: '#fff',
-  
+    tint: tintColorLight,
+    icon: tintColorLight,
   },
   dark: {
     text: '#fefeff',
     background: '#151718',
     tint: tintColorDark,
-    
+    icon: tintColorDark,
   },
 };
 

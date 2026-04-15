@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import ActivityCard from '@/components/ActivityCard';
 import FilterModal from '@/components/FilterModal';
 
 const activitiesData = [

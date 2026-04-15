@@ -1,10 +1,16 @@
 import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 
-export default function CostsTab({ activity }) {
+import type { ActivityCost, ActivityDetailsRecord } from "./types";
+
+type CostsTabProps = {
+  activity: ActivityDetailsRecord;
+};
+
+export default function CostsTab({ activity }: CostsTabProps) {
   return (
     <View style={styles.tabContent}>
-      {activity.costs.map((cost, i) => (
+      {activity.costs.map((cost: ActivityCost, i: number) => (
         <View key={i} style={styles.costCard}>
           <Image
             source={{ uri: cost.image }}

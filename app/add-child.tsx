@@ -16,7 +16,7 @@ const CITY_OPTIONS = ["Jerusalem", "Ramallah", "Nablus", "Hebron", "Bethlehem"];
 const GENDER_OPTIONS = ["Male", "Female"];
 type InterestIconName = ComponentProps<typeof Ionicons>["name"];
 
-const INTEREST_OPTIONS: Array<{ label: string; icon: InterestIconName }> = [
+const INTEREST_OPTIONS: { label: string; icon: InterestIconName }[] = [
   { label: "Drawing", icon: "brush-outline" },
   { label: "Football", icon: "football-outline" },
   { label: "Basketball", icon: "basketball-outline" },

@@ -1,7 +1,13 @@
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function OverviewIcon({ name }) {
+import type { OverviewIconName } from "./types";
+
+type OverviewIconProps = {
+  name: OverviewIconName;
+};
+
+export default function OverviewIcon({ name }: OverviewIconProps) {
   const p = { size: 20, color: "#2C6E8A" };
 
   switch (name) {

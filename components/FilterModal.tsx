@@ -24,7 +24,13 @@ const FilterModal = ({ visible, onClose, onApply }: any) => {
 
         <Text style={styles.label}>City</Text>
         <View style={styles.inputBox}>
-          <Text style={styles.placeholder}>Select City</Text>
+          <TextInput
+            placeholder="Select City"
+            placeholderTextColor="#999"
+            style={styles.cityInput}
+            value={city}
+            onChangeText={setCity}
+          />
         </View>
 
         <Text style={styles.label}>Select Age Group</Text>
@@ -130,6 +136,10 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: '#999',
+  },
+  cityInput: {
+    color: '#183B4E',
+    padding: 0,
   },
   row: {
     flexDirection: 'row',
