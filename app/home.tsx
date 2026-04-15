@@ -4,11 +4,16 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import ActivityCard from '@/components/ActivityCard';
+import BottomNav from '@/components/bottom-nav';
 import ClubsCard from '@/components/clubsCard';
 import FilterModal from '@/components/FilterModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const HomePage = () => {
+type HomePageProps = {
+  showBottomNav?: boolean;
+};
+
+const HomePage = ({ showBottomNav = true }: HomePageProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterVisible, setFilterVisible] = useState(false);
 
@@ -83,116 +88,119 @@ const HomePage = () => {
   }, [searchQuery]);
 
   return (
-    <ScrollView style={styles.safeArea}>
-      <SafeAreaView>
-      <Text style={styles.title}>Home Page</Text>
-</SafeAreaView>
-      <View style={styles.container}>
+    <SafeAreaView style={styles.page}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Text style={styles.title}>Home Page</Text>
+        <View style={styles.container}>
 
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Hello!</Text>
+          {/* HEADER */}
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Hello!</Text>
 
-          <View style={styles.headerButtons}>
-            <Pressable onPress={handleAddChild}>
-              <Text style={styles.addChildButton}>+Add New Child</Text>
-            </Pressable>
+            <View style={styles.headerButtons}>
+              <Pressable onPress={handleAddChild}>
+                <Text style={styles.addChildButton}>+Add New Child</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="search bar"
-              placeholderTextColor="#183B4E"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="search bar"
+                placeholderTextColor="#183B4E"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
 
-            <MaterialIcons
-              name="tune"
-              size={22}
-              color="#728293"
-              onPress={() => setFilterVisible(true)}
-            />
+              <MaterialIcons
+                name="tune"
+                size={22}
+                color="#728293"
+                onPress={() => setFilterVisible(true)}
+              />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollRow}>
+              {filteredActivities.map((activity, index) => (
+                <ActivityCard
+                  key={index}
+                  title={activity.title}
+                  location={activity.location}
+                  rating={activity.rating}
+                  imageUrl={activity.imageUrl}
+                   onPress={() => router.push(
+                       '/ActivityDetails/1'
+                      /* `/ActivityDetails/${index + 1}`*/
+                       )}
+                />
+              ))}
+            </ScrollView>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollRow}>
-            {filteredActivities.map((activity, index) => (
-              <ActivityCard
+
+          <Text style={styles.sectionTitle}>Common Interests</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {Data.map((item, index) => (
+              <Pressable
                 key={index}
-                title={activity.title}
-                location={activity.location}
-                rating={activity.rating}
-                imageUrl={activity.imageUrl}
-                 onPress={() => router.push(
-                     '/ActivityDetails/1'
-                    /* `/ActivityDetails/${index + 1}`*/
-                     )}
+                style={styles.interestCard}
+                onPress={() =>
+                  router.push({ pathname: '/interest', params: { interest: item } })
+                }
+              >
+                <Text style={styles.interestCardLabel}>{item}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.sectionTitle}>Recommended Activities</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {filteredActivities.map((item, index) => (
+              <ActivityCard
+                key={item.id ?? index}
+                {...item}
+                onPress={() => router.push(`/ActivityDetails/${item.id}`)}
               />
             ))}
           </ScrollView>
-        </View>
 
-        <Text style={styles.sectionTitle}>Common Interests</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {Data.map((item, index) => (
-            <Pressable
-              key={index}
-              style={styles.interestCard}
-              onPress={() =>
-                router.push({ pathname: '/interest', params: { interest: item } })
-              }
-            >
-              <Text style={styles.interestCardLabel}>{item}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        <Text style={styles.sectionTitle}>Recommended Activities</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {filteredActivities.map((item, index) => (
-            <ActivityCard
-              key={item.id ?? index}
-              {...item}
-              onPress={() => router.push(`/ActivityDetails/${item.id}`)}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={styles.safeArea}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Top-Best clubs in palestine</Text>
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/topclubs',
-                  params: { clubs: JSON.stringify(Clubs) },
-                })
-              }
-              style={styles.viewAllButton}
-            >
-              <Text style={styles.viewAllText}>View All</Text>
-            </Pressable>
-          </View>
-          <View>
-            {filteredClubs.map((club, index) => (
-              <ClubsCard
-                key={club.id ?? index}
-                title={club.title}
-                details={club.details}
-                rating={club.rating}
-                imageUrl={club.imageUrl}
-               onPress={() => router.push({
-                 pathname: '/ActivityDetails/1',
-                /*onPress={() => router.push(`/ActivityDetails/${item.id}`)}"*/
-                 params: { id: club.id }
-               })}
-              />
-            ))}
+          <View style={styles.safeArea}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Top-Best clubs in palestine</Text>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/topclubs',
+                    params: { clubs: JSON.stringify(Clubs) },
+                  })
+                }
+                style={styles.viewAllButton}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+              </Pressable>
+            </View>
+            <View>
+              {filteredClubs.map((club, index) => (
+                <ClubsCard
+                  key={club.id ?? index}
+                  title={club.title}
+                  details={club.details}
+                  rating={club.rating}
+                  imageUrl={club.imageUrl}
+                 onPress={() => router.push({
+                   pathname: '/ActivityDetails/1',
+                  /*onPress={() => router.push(`/ActivityDetails/${item.id}`)}"*/
+                   params: { id: club.id }
+                 })}
+                />
+              ))}
+            </View>
           </View>
         </View>
-      </View>
+
       <FilterModal
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}
@@ -200,15 +208,28 @@ const HomePage = () => {
           console.log('Filters:', filters);
         }}
       />
-    </ScrollView>
+      </ScrollView>
+      {showBottomNav ? <BottomNav /> : null}
+    </SafeAreaView>
   );
 };
 
 export default HomePage;
 
 const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   safeArea: {
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   title: {
     fontSize: 24,
@@ -249,6 +270,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     borderRadius: 20,
     paddingHorizontal: 12,
+  },
+  scrollRow: {
+    paddingRight: 16,
   },
   searchInput: {
     flex: 1,

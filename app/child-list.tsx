@@ -50,8 +50,6 @@ export default function ChildListScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{child.name}</Text>
-              <Text style={styles.dash}>----------------------</Text>
-              <Text style={styles.dash}>----------</Text>
             </View>
 
             <Ionicons

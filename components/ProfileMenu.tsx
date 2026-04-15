@@ -31,7 +31,7 @@ export default function ProfileMenu() {
       <MenuItem
         icon="person-outline"
         title="Child Management"
-        onPress={() => router.push("/child-management")}
+        onPress={() => router.push("/child-list")}
       />
     </View>
   );
