@@ -1,20 +1,26 @@
 import axios from "axios";
 import * as FileSystem from "expo-file-system/legacy";
 import ApiBase from "./apiBase";
+import {
+  flattenUsers,
+  getFirstUser,
+  mergeUserWithOverride,
+  normalizeUser,
+  overridesToUsers,
+  readPersistedOverrides,
+  replaceOverrideMap,
+  writePersistedOverrides,
+} from "./user.service.shared";
+import type {
+  UpdateUserPayload,
+  UserId,
+  UserProfile,
+  UserProfileDraft,
+} from "./user.types";
 
-export interface UserProfile {
-  id: string;
-  PName: string;
-  imageUrl: string;
-  Email: string;
-  Phone: string;
-  Address: string;
-  EmergencyNumber: string;
-  ChildName?: string;
-  City?: string;
-}
+export type { UpdateUserPayload, UserProfile } from "./user.types";
 
-const userOverrides = new Map<string, Partial<UserProfile>>();
+const userOverrides = new Map<string, UserProfileDraft>();
 const userOverridesFileUri = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}kidscape-user-overrides.json`
   : null;
@@ -22,56 +28,26 @@ const userOverridesFileUri = FileSystem.documentDirectory
 let hasLoadedUserOverrides = false;
 let userOverridesLoadPromise: Promise<void> | null = null;
 
-const isUserProfile = (value: unknown): value is Partial<UserProfile> => {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-};
-
-const normalizeUser = (value: Partial<UserProfile>): UserProfile => {
-  return {
-    id: String(value.id ?? ""),
-    PName: value.PName ?? "",
-    imageUrl: value.imageUrl ?? "",
-    Email: value.Email ?? "",
-    Phone: value.Phone ?? "",
-    Address: value.Address ?? "",
-    EmergencyNumber: value.EmergencyNumber ?? "",
-    ChildName: value.ChildName ?? "",
-    City: value.City ?? "",
-  };
-};
-
-const mergeUserWithOverride = (user: UserProfile): UserProfile => {
-  const override = userOverrides.get(user.id);
-
-  if (!override) {
-    return user;
-  }
-
-  return normalizeUser({
-    ...user,
-    ...override,
-    id: user.id,
-  });
+const mergeUser = (user: UserProfile): UserProfile => {
+  return mergeUserWithOverride(user, userOverrides.get(user.id));
 };
 
 const getStoredUsers = (): UserProfile[] => {
-  return Array.from(userOverrides.entries()).map(([id, value]) =>
-    normalizeUser({
-      ...value,
-      id,
-    })
-  );
+  return overridesToUsers(userOverrides.entries());
 };
 
 const persistUserOverrides = async (): Promise<void> => {
-  if (!userOverridesFileUri) {
-    return;
-  }
+  await writePersistedOverrides(Object.fromEntries(userOverrides), {
+    fileUri: userOverridesFileUri,
+  });
+};
 
-  await FileSystem.writeAsStringAsync(
-    userOverridesFileUri,
-    JSON.stringify(Object.fromEntries(userOverrides))
-  );
+const saveUserOverride = async (
+  id: string,
+  user: UserProfile
+): Promise<void> => {
+  userOverrides.set(id, user);
+  await persistUserOverrides();
 };
 
 const loadUserOverrides = async (): Promise<void> => {
@@ -81,29 +57,11 @@ const loadUserOverrides = async (): Promise<void> => {
 
   if (!userOverridesLoadPromise) {
     userOverridesLoadPromise = (async () => {
-      if (!userOverridesFileUri) {
-        hasLoadedUserOverrides = true;
-        return;
-      }
-
       try {
-        const fileInfo = await FileSystem.getInfoAsync(userOverridesFileUri);
-
-        if (!fileInfo.exists) {
-          hasLoadedUserOverrides = true;
-          return;
-        }
-
-        const savedOverrides = await FileSystem.readAsStringAsync(userOverridesFileUri);
-        const parsedOverrides = JSON.parse(savedOverrides) as Record<string, unknown>;
-
-        for (const [id, value] of Object.entries(parsedOverrides)) {
-          if (!isUserProfile(value)) {
-            continue;
-          }
-
-          userOverrides.set(id, value);
-        }
+        replaceOverrideMap(
+          userOverrides,
+          await readPersistedOverrides({ fileUri: userOverridesFileUri })
+        );
       } catch {
         userOverrides.clear();
       } finally {
@@ -117,24 +75,12 @@ const loadUserOverrides = async (): Promise<void> => {
   await userOverridesLoadPromise;
 };
 
-const flattenUsers = (payload: unknown): UserProfile[] => {
-  if (Array.isArray(payload)) {
-    return payload.flatMap(flattenUsers);
-  }
-
-  if (isUserProfile(payload)) {
-    return [normalizeUser(payload)];
-  }
-
-  return [];
-};
-
 export const getUsers = async (): Promise<UserProfile[]> => {
   await loadUserOverrides();
 
   try {
     const response = await ApiBase.get("/users");
-    return flattenUsers(response.data).map(mergeUserWithOverride);
+    return flattenUsers(response.data).map(mergeUser);
   } catch {
     const storedUsers = getStoredUsers();
 
@@ -146,17 +92,17 @@ export const getUsers = async (): Promise<UserProfile[]> => {
   }
 };
 
-export const getUser = async (id: number | string): Promise<UserProfile> => {
+export const getUser = async (id: UserId): Promise<UserProfile> => {
   const normalizedId = String(id);
 
   await loadUserOverrides();
 
   try {
     const response = await ApiBase.get(`/users/${normalizedId}`);
-    const users = flattenUsers(response.data);
+    const user = getFirstUser(response.data);
 
-    if (users[0]) {
-      return mergeUserWithOverride(users[0]);
+    if (user) {
+      return mergeUser(user);
     }
   } catch {
     // Fall back to the collection endpoint if the item endpoint is unavailable.
@@ -170,7 +116,7 @@ export const getUser = async (id: number | string): Promise<UserProfile> => {
       throw new Error(`User ${normalizedId} not found`);
     }
 
-    return mergeUserWithOverride(matchedUser);
+    return matchedUser;
   } catch {
     const storedUser = userOverrides.get(normalizedId);
 
@@ -185,10 +131,8 @@ export const getUser = async (id: number | string): Promise<UserProfile> => {
   }
 };
 
-export type UpdateUserPayload = Omit<UserProfile, "id">;
-
 export const updateUser = async (
-  id: number | string,
+  id: UserId,
   payload: UpdateUserPayload
 ): Promise<UserProfile> => {
   const normalizedId = String(id);
@@ -197,21 +141,19 @@ export const updateUser = async (
 
   try {
     const response = await ApiBase.put(`/users/${normalizedId}`, payload);
-    const users = flattenUsers(response.data);
+    const user = getFirstUser(response.data);
 
-    if (!users[0]) {
+    if (!user) {
       throw new Error(`Unable to update user ${normalizedId}`);
     }
 
     const updatedUser = normalizeUser({
-      ...users[0],
+      ...user,
       ...payload,
       id: normalizedId,
     });
 
-    userOverrides.set(normalizedId, updatedUser);
-    await persistUserOverrides();
-
+    await saveUserOverride(normalizedId, updatedUser);
     return updatedUser;
   } catch (error) {
     if (!axios.isAxiosError(error) || error.response?.status !== 404) {
@@ -226,8 +168,6 @@ export const updateUser = async (
     id: normalizedId,
   });
 
-  userOverrides.set(normalizedId, updatedUser);
-  await persistUserOverrides();
-
+  await saveUserOverride(normalizedId, updatedUser);
   return updatedUser;
 };
