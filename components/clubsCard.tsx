@@ -13,6 +13,7 @@ type ClubCardProps = {
   details: string;
   rating: string | number;
   imageUrl?: string;
+  location: string;
   onPress: () => void;
 };
 
@@ -21,6 +22,7 @@ const ClubsCard = ({
   details,
   rating,
   imageUrl,
+  location,
   onPress,
 }: ClubCardProps) => {
   const backgroundImage = imageUrl
@@ -47,8 +49,8 @@ const ClubsCard = ({
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.details}>{details}</Text>
         <View style={styles.locationRow}>
-          <MaterialIcons name="location-on" size={14} color="#183B4E" />
-          <Text style={styles.locationText}>{details}</Text>
+          <MaterialIcons name="location-on" size={14} color="#4e1818" />
+          <Text style={styles.locationText}>{location}</Text>
         </View>
       </View>
     </Pressable>
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   locationText: {
-    color: "#728293",
+    color: "#183B4E",
     marginLeft: 6,
     fontSize: 13,
     fontWeight: "400",

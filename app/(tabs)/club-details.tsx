@@ -1,24 +1,65 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   Image,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { CLUBS } from '@/data/clubs';
+import { getClubFromFirebase } from '@/firebase';
 
-
+interface ClubDetail {
+  id: string;
+  title: string;
+  details: string;
+  rating: string;
+  imageUrl: string;
+  description: string;
+  location: string;
+}
 
 export default function ClubDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const clubId = Array.isArray(id) ? id[0] : id;
-  const club = clubId ? CLUBS[clubId] : undefined;
+  const [club, setClub] = useState<ClubDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadClub = async () => {
+      if (!clubId) {
+        setClub(null);
+        setLoading(false);
+        return;
+      }
+
+      const fetchedClub = await getClubFromFirebase(clubId);
+      setClub(fetchedClub as ClubDetail | null);
+      setLoading(false);
+    };
+
+    loadClub();
+  }, [clubId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+            <Ionicons name="arrow-back" size={22} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Club Details</Text>
+          <View style={{ width: 30 }} />
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading club details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!club) {
     return (

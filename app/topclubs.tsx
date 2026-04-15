@@ -60,13 +60,10 @@ const TopClubsPage = () => {
             details={club.details}
             rating={club.rating}
             imageUrl={club.imageUrl}
-           onPress={() =>
-  router.push({
-    pathname: '/club-details',
-    params: { id: club.id },
-  })
-}
-          />
+            onPress={() => router.push({
+              pathname: '/club-details',
+              params: { id: club.id },
+            })} location={''}          />
         ))
       ) : (
         <Text style={styles.emptyText}>
