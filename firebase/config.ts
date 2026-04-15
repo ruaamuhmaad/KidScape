@@ -22,7 +22,7 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | undefined;
-let db: Firestore | undefined;
+export let db: Firestore | undefined;
 
 const initFirebase = () => {
   if (typeof window === 'undefined') {
