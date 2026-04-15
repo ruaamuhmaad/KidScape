@@ -1,35 +1,23 @@
 import React, { useState } from "react";
 import {
-  type KeyboardTypeOptions,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   StatusBar,
 } from "react-native";
+import styles from "@/style/bookingFormStyles";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import type { ComponentProps } from "react";
-
-type InputFieldProps = {
-  icon: ComponentProps<typeof Ionicons>["name"];
-  placeholder: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  keyboardType?: KeyboardTypeOptions;
-  multiline?: boolean;
-  height?: number;
-};
-
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import { submitBooking } from "@/firebase/bookingService";
 export default function BookingFormScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const activityParam = Array.isArray(params.activity) ? params.activity[0] : params.activity;
-  const activity = activityParam ?? "Sport Village";
+  const activity = params.activity || "Sport Village";
 
   const [parentName, setParentName] = useState("");
   const [phone, setPhone] = useState("");
@@ -40,21 +28,38 @@ export default function BookingFormScreen() {
   const [medicalInfo, setMedicalInfo] = useState("");
   const [agree, setAgree] = useState(false);
 
-  const handleSubmit = () => {
-    if (!parentName || !phone || !childName || !age || !agree) {
-      alert("Please fill the required fields.");
-      return;
-    }
+ const handleSubmit = async () => {
+     if (!parentName || !phone || !childName || !age || !agree) {
+       alert("Please fill the required fields.");
+       return;
+     }
 
-    router.push({
-      pathname: "/booking-submitted",
-      params: {
-        activity,
-        parentName,
-        childName,
-      },
-    });
-  };
+     try {
+       await submitBooking({
+         activity: String(activity),
+         parentName,
+         phone,
+         email,
+         childName,
+         age,
+         notes,
+         medicalInfo,
+       });
+
+       router.push({
+         pathname: "/booking-submitted",
+         params: {
+           activity,
+           parentName,
+           childName,
+         },
+       });
+     } catch (error) {
+       console.log("Booking submit error:", error);
+       alert("Something went wrong. Please try again.");
+     }
+   };
+
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -73,12 +78,7 @@ export default function BookingFormScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.activityCard}>
-          <View style={styles.activityIcon}>
-            <Ionicons name="football-outline" size={18} color="#2563EB" />
-          </View>
-          <Text style={styles.activityText}>{activity}</Text>
-        </View>
+
 
         <Text style={styles.sectionTitle}>Parent Information</Text>
 
@@ -155,9 +155,11 @@ export default function BookingFormScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Submit Booking Request</Text>
-        </TouchableOpacity>
+   <PrimaryButton
+     title="Submit Booking Request"
+     onPress={handleSubmit}
+     style={styles.submitButtonCustom}
+   />
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,7 +173,7 @@ function InputField({
   keyboardType = "default",
   multiline = false,
   height = 54,
-}: InputFieldProps) {
+}) {
   return (
     <View style={[styles.inputWrapper, multiline && { height }]}>
       <Ionicons name={icon} size={18} color="#94A3B8" style={styles.inputIcon} />
@@ -195,130 +197,3 @@ function InputField({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#F7F8FA",
-  },
-  header: {
-    height: 56,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-  },
-  iconBtn: {
-    width: 32,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 30,
-  },
-  activityCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  activityIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "#EEF4FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  activityText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  inputWrapper: {
-    height: 54,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: "#111827",
-  },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginTop: 8,
-    marginBottom: 18,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: "#CBD5E1",
-    marginRight: 10,
-    marginTop: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  checkboxChecked: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  checkboxText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#475569",
-  },
-  submitButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 4,
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-});

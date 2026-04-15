@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,65 +5,63 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  StyleSheet,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
+import ReviewsTab from "@/components/activity-details/ReviewsTab";
 import OverviewTab from "@/components/activity-details/OverviewTab";
 import DetailsTab from "@/components/activity-details/DetailsTab";
 import CostsTab from "@/components/activity-details/CostsTab";
 import ActivityTabs from "@/components/activity-details/ActivityTabs";
-import type {
-  ActivityDetailsRecord,
-  ActivityTabName,
-} from "@/components/activity-details/types";
-import { getActivityById } from "@/firebase";
-
-const BLUE = "#2C6E8A";
-const DARK = "#1a1a1a";
-
+import { getActivityById } from "@/firebase/activityDetailsService";
+import React, { useCallback, useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import styles from "@/style/activityDetailsStyles";
+import { COLORS } from "@/constants/colors";
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
-  const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
+  const [activeTab, setActiveTab] = useState("Overview");
+  const [activity, setActivity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const activityId = Array.isArray(id) ? id[0] : id;
 
-  useEffect(() => {
-    const fetchActivity = async () => {
-      try {
-        console.log("Route activityId =", activityId);
+const fetchActivity = async () => {
+  try {
+    if (!activityId || typeof activityId !== "string") {
+      setActivity(null);
+      return;
+    }
 
-        if (!activityId || typeof activityId !== "string") {
-          setActivity(null);
-          return;
-        }
+    const data = await getActivityById(activityId);
+    setActivity(data);
+  } catch (error) {
+    console.log("Fetch activity error:", error);
+    setActivity(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
-        const data = await getActivityById(activityId);
-        console.log("Fetched activity =", data);
-        setActivity(data);
-      } catch (error) {
-        console.log("Fetch activity error:", error);
-        setActivity(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  fetchActivity();
+}, [activityId]);
 
+useFocusEffect(
+  useCallback(() => {
     fetchActivity();
-  }, [activityId]);
+  }, [activityId])
+);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color={BLUE} />
+          <ActivityIndicator size="large" color={COLORS.blue} />
         </View>
       </SafeAreaView>
     );
@@ -88,6 +85,8 @@ export default function ActivityDetailsScreen() {
         return <DetailsTab activity={activity} />;
       case "Costs":
         return <CostsTab activity={activity} />;
+        case "Reviews":
+              return <ReviewsTab activity={activity} />;
       default:
         return <OverviewTab activity={activity} />;
     }
@@ -124,7 +123,7 @@ export default function ActivityDetailsScreen() {
           <Text style={styles.activityTitle}>{activity.title}</Text>
 
           <View style={styles.locationRow}>
-            <Ionicons name="location-sharp" size={15} color={BLUE} />
+            <Ionicons name="location-sharp" size={15} color={COLORS.blue} />
             <Text style={styles.locationText}>{activity.location}</Text>
           </View>
         </View>
@@ -134,97 +133,22 @@ export default function ActivityDetailsScreen() {
         {renderTab()}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() =>
-            router.push({
-              pathname: "/booking-form",
-              params: {
-                activity: activity.title,
-                activityId: activity.id,
-              },
-            })
-          }
-          activeOpacity={0.85}
-        >
-          <Text style={styles.registerButtonText}>Registration Request</Text>
-        </TouchableOpacity>
-      </View>
+  {activeTab !== "Reviews" && (
+<View style={styles.footer}>
+  <PrimaryButton
+    title="Registration Request"
+    onPress={() =>
+      router.push({
+        pathname: "/booking-form",
+        params: {
+          activity: activity.title,
+          activityId: activity.id,
+        },
+      })
+    }
+  />
+</View>
+  )}
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#e8e8e8",
-  },
-
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: DARK,
-    letterSpacing: 0.2,
-  },
-
-  iconBtn: { padding: 4, width: 30 },
-
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-
-  imageWrapper: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-
-  heroImage: { width: "100%", height: 210 },
-
-  titleBlock: { marginHorizontal: 16, marginTop: 14 },
-
-  activityTitle: { fontSize: 20, fontWeight: "700", color: DARK },
-
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-
-  locationText: {
-    fontSize: 13.5,
-    color: "#555",
-    marginLeft: 4,
-  },
-
-  footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-    borderTopWidth: 0.5,
-    borderTopColor: "#e8e8e8",
-  },
-
-  registerButton: {
-    backgroundColor: "#1B3C4F",
-    borderRadius: 28,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-
-  registerButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});
