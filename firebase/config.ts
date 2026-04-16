@@ -1,48 +1,32 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
-const getRequiredEnv = (name: string) => {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-};
-
 const firebaseConfig = {
-   apiKey: "AIzaSyAELadlP3Bh5cT6qET8cG8q7_QW6q3DCQc",
-     authDomain: "kidscape-6ac7b.firebaseapp.com",
-     projectId: "kidscape-6ac7b",
-     storageBucket: "kidscape-6ac7b.firebasestorage.app",
-     messagingSenderId: "270750415295",
-     appId: "1:270750415295:web:35079669f127a357b8c90a",
-     measurementId: "G-38KV7462H4",
- /* apiKey: getRequiredEnv('EXPO_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: getRequiredEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  projectId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: getRequiredEnv('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_APP_ID'),
-  measurementId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID'),*/
+  apiKey: 'AIzaSyAELadlP3Bh5cT6qET8cG8q7_QW6q3DCQc',
+  authDomain: 'kidscape-6ac7b.firebaseapp.com',
+  projectId: 'kidscape-6ac7b',
+  storageBucket: 'kidscape-6ac7b.firebasestorage.app',
+  messagingSenderId: '270750415295',
+  appId: '1:270750415295:web:35079669f127a357b8c90a',
+  measurementId: 'G-38KV7462H4',
 };
 
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
+let auth: Auth | undefined;
 
-const initFirebase = () => {
-  if (typeof window === 'undefined') {
-    throw new Error('Firebase can only be initialized on the client side.');
+export const getFirebaseApp = (): FirebaseApp => {
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   }
 
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  return app;
 };
 
 export const getDb = (): Firestore => {
   if (!db) {
-    initFirebase();
+    db = getFirestore(getFirebaseApp());
   }
 
   if (!db) {
@@ -52,4 +36,12 @@ export const getDb = (): Firestore => {
   return db;
 };
 
-export default getDb;
+export const getFirebaseAuth = (): Auth => {
+  if (!auth) {
+    auth = getAuth(getFirebaseApp());
+  }
+
+  return auth;
+};
+
+export default getFirebaseApp;
