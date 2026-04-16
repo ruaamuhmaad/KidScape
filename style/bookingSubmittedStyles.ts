@@ -100,7 +100,7 @@ const bookingSubmittedStyles = StyleSheet.create({
     color: "#111827",
   },
   mainButtonCustom: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1B3C4F",
     marginBottom: 14,
   },
   linkText: {
