@@ -1,7 +1,10 @@
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "./config";
+import type { ActivityDetailsRecord } from "@/components/activity-details/types";
 
-export async function getActivityById(id: string) {
+export async function getActivityById(
+  id: string
+): Promise<ActivityDetailsRecord | null> {
   const safeId = String(id).trim();
   const db = getDb();
 
@@ -19,5 +22,5 @@ export async function getActivityById(id: string) {
   return {
     id: docSnap.id,
     ...docSnap.data(),
-  };
+  } as ActivityDetailsRecord;
 }

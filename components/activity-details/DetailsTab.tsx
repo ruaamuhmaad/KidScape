@@ -1,7 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import type { ActivityDetailsRecord } from "./types";
 
-export default function DetailsTab({ activity }) {
+type DetailsTabProps = {
+  activity: ActivityDetailsRecord;
+};
+
+export default function DetailsTab({ activity }: DetailsTabProps) {
   return (
     <View style={styles.tabContent}>
       <Text style={styles.sectionLabel}>About</Text>

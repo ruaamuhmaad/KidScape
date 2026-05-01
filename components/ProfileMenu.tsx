@@ -26,12 +26,13 @@ export default function ProfileMenu() {
       <MenuItem
         icon="notifications-outline"
         title="Notifications"
+        onPress={() => router.push("/notifications")}
       />
 
       <MenuItem
         icon="person-outline"
         title="Child Management"
-        onPress={() => router.push("/child-list")}
+        onPress={() => router.push("/child-management")}
       />
     </View>
   );

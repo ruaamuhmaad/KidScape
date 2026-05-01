@@ -11,6 +11,10 @@ import {
 } from 'firebase/auth';
 import { Timestamp, doc, setDoc } from 'firebase/firestore';
 import { getDb, getFirebaseAuth } from './config';
+import {
+  DEFAULT_PARENT_PERMISSIONS,
+  DEFAULT_PARENT_ROLE,
+} from './userProfile';
 
 export interface SignUpPayload {
   email: string;
@@ -18,7 +22,9 @@ export interface SignUpPayload {
   fullName?: string;
   mobile?: string;
   emergency?: string;
+  address?: string;
   city?: string;
+  imageUrl?: string;
 }
 
 export interface UserProfileDocument {
@@ -28,7 +34,17 @@ export interface UserProfileDocument {
   displayName: string;
   mobile: string;
   emergency: string;
+  address: string;
   city: string;
+  imageUrl: string;
+  role: string;
+  permissions: string[];
+  PName: string;
+  Email: string;
+  Phone: string;
+  Address: string;
+  EmergencyNumber: string;
+  City: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -39,7 +55,9 @@ export const emptySignUpPayload: SignUpPayload = {
   fullName: '',
   mobile: '',
   emergency: '',
+  address: '',
   city: '',
+  imageUrl: '',
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -89,15 +107,31 @@ const buildUserProfileDocument = (
 ): UserProfileDocument => {
   const now = Timestamp.now();
   const fullName = normalizeText(payload.fullName);
+  const email = normalizeEmail(payload.email);
+  const mobile = normalizeText(payload.mobile);
+  const emergency = normalizeText(payload.emergency);
+  const address = normalizeText(payload.address);
+  const city = normalizeText(payload.city);
+  const imageUrl = normalizeText(payload.imageUrl);
 
   return {
     uid: userId,
-    email: normalizeEmail(payload.email),
+    email,
     fullName,
     displayName: fullName,
-    mobile: normalizeText(payload.mobile),
-    emergency: normalizeText(payload.emergency),
-    city: normalizeText(payload.city),
+    mobile,
+    emergency,
+    address,
+    city,
+    imageUrl,
+    role: DEFAULT_PARENT_ROLE,
+    permissions: DEFAULT_PARENT_PERMISSIONS,
+    PName: fullName,
+    Email: email,
+    Phone: mobile,
+    Address: address,
+    EmergencyNumber: emergency,
+    City: city,
     createdAt: now,
     updatedAt: now,
   };
@@ -128,6 +162,8 @@ export async function signUp(
       payload.password
     );
 
+    await userCredential.user.getIdToken();
+
     if (fullName) {
       await updateProfile(userCredential.user, { displayName: fullName });
     }
@@ -146,11 +182,15 @@ export async function signUp(
 
 export const login = async (email: string, password: string) => {
   try {
-    return await signInWithEmailAndPassword(
+    const userCredential = await signInWithEmailAndPassword(
       getFirebaseAuth(),
       normalizeEmail(email),
       password
     );
+
+    await userCredential.user.getIdToken();
+
+    return userCredential;
   } catch (error) {
     throw mapAuthError(error);
   }
