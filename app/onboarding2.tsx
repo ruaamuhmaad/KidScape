@@ -22,7 +22,7 @@ export default function Onboarding2() {
 
       {/* Description */}
       <Text style={styles.desc}>
-        Find summer camps that fit your child's age,
+        Find summer camps that fit your child{"'"}s age,
         interests, and your budget—all across Palestine
       </Text>
 

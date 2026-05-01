@@ -16,9 +16,14 @@ import { getDb } from './config';
 export interface ChildData {
   name: string;
   age: number;
+  city: string;
+  gender: string;
+  dateOfBirth: string;
   interests?: string[];
   parentId: string;
+  imageUrl?: string;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface ActivityData {
@@ -41,6 +46,7 @@ export interface ClubData {
 }
 
 type FirebaseEntity = Record<string, unknown> & { id: string };
+export type ChildRecord = ChildData & { id: string };
 
 const capitalizeName = (name: string) => name[0].toUpperCase() + name.slice(1);
 
@@ -77,11 +83,55 @@ const mapEntity = (entityId: string, data: Record<string, unknown>): FirebaseEnt
   ...data,
 });
 
+const asString = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  return String(value);
+};
+
+const asNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+};
+
+const mapChild = (id: string, data: Record<string, unknown>): ChildRecord => ({
+  id,
+  name: asString(data.name),
+  age: asNumber(data.age),
+  city: asString(data.city),
+  gender: asString(data.gender),
+  dateOfBirth: asString(data.dateOfBirth),
+  interests: asStringArray(data.interests),
+  parentId: asString(data.parentId),
+  imageUrl: asString(data.imageUrl),
+  createdAt: data.createdAt instanceof Timestamp ? data.createdAt : undefined,
+  updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : undefined,
+});
+
 export const addChildToFirebase = async (childData: ChildData) => {
   const db = getDb();
   const docRef = await addDoc(collection(db, 'children'), {
     ...childData,
     createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
   });
 
   return docRef.id;
@@ -110,7 +160,10 @@ export const addClubToFirebase = async (clubData: ClubData) => {
 export const updateChildInFirebase = async (childId: string, childData: Partial<ChildData>) => {
   const db = getDb();
   const childRef = doc(db, 'children', childId);
-  await updateDoc(childRef, childData);
+  await updateDoc(childRef, {
+    ...childData,
+    updatedAt: Timestamp.now(),
+  });
 };
 
 export const deleteChildFromFirebase = async (childId: string) => {
@@ -118,12 +171,14 @@ export const deleteChildFromFirebase = async (childId: string) => {
   await deleteDoc(doc(db, 'children', childId));
 };
 
-export const getChildrenByParentId = async (parentId: string): Promise<FirebaseEntity[]> => {
+export const getChildrenByParentId = async (parentId: string): Promise<ChildRecord[]> => {
   const db = getDb();
   const childrenQuery = query(collection(db, 'children'), where('parentId', '==', parentId));
   const querySnapshot = await getDocs(childrenQuery);
 
-  return querySnapshot.docs.map((item) => mapEntity(item.id, item.data() as Record<string, unknown>));
+  return querySnapshot.docs
+    .map((item) => mapChild(item.id, item.data() as Record<string, unknown>))
+    .sort((first, second) => first.name.localeCompare(second.name));
 };
 
 export const getActivityFromFirebase = async (activityId: string): Promise<FirebaseEntity | null> => {
