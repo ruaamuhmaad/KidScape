@@ -12,7 +12,7 @@ export default function SignUp() {
   const [password, setPassword] = useState('');
   const [mobile, setMobile] = useState('');
   const [emergency, setEmergency] = useState('');
-  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
   const [agree, setAgree] = useState(false);
 
   const handleSignUp = () => {
@@ -22,7 +22,14 @@ export default function SignUp() {
       return;
     }
 
-    signUp(email, password)
+    signUp({
+      email,
+      password,
+      fullName,
+      mobile,
+      emergency,
+      address,
+    })
       .then(() => {
         alert("Account created ✅");
         router.replace('/login' as any);
@@ -75,7 +82,7 @@ export default function SignUp() {
       <TextInput
         placeholder="Enter your Address"
         style={styles.input}
-        onChangeText={setCity}
+        onChangeText={setAddress}
       />
 
       {/* Emergency */}

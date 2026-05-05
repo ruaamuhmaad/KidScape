@@ -1,8 +1,12 @@
-import { getUser, type UserProfile } from "@/api/editUserService";
 import BottomNav from "@/components/bottom-nav";
 import ProfileActions from "@/components/ProfileActions";
 import ProfileHeader from "@/components/ProfileHeader";
 import ProfileMenu from "@/components/ProfileMenu";
+import {
+  getCurrentUserProfile,
+  type AuthenticatedUserProfile,
+} from "@/services/authService";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,8 +17,7 @@ import {
 } from "react-native";
 
 export default function Profile() {
-  const userId = 1;
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<AuthenticatedUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -23,7 +26,7 @@ export default function Profile() {
 
     const loadProfile = async () => {
       try {
-        const userProfile = await getUser(userId);
+        const userProfile = await getCurrentUserProfile();
 
         if (!isMounted) {
           return;
@@ -31,12 +34,21 @@ export default function Profile() {
 
         setProfile(userProfile);
         setErrorMessage("");
-      } catch {
+      } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        setErrorMessage(`Unable to load user ${userId} right now.`);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to load your profile right now.";
+
+        setErrorMessage(message);
+
+        if (message.toLowerCase().includes("log in")) {
+          router.replace("/login" as any);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -49,7 +61,7 @@ export default function Profile() {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

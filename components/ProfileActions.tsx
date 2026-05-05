@@ -1,16 +1,39 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { logout } from "@/services/authService";
 
 export default function ProfileActions() {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      router.replace("/login" as any);
+    } catch {
+      Alert.alert("Logout failed", "Unable to log out right now.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <View>
-      <TouchableOpacity style={styles.logoutBtn}>
-        <Ionicons name="log-out-outline" size={18} color="#fff" />
-        <Text style={styles.logoutText}>Log out</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteBtn}>
-        <Text style={styles.deleteText}>Delete account</Text>
+      <TouchableOpacity
+        style={[styles.logoutBtn, isLoggingOut && styles.logoutBtnDisabled]}
+        onPress={handleLogout}
+        disabled={isLoggingOut}
+      >
+        {isLoggingOut ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="log-out-outline" size={18} color="#fff" />
+            <Text style={styles.logoutText}>Log out</Text>
+          </>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -31,14 +54,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-  deleteBtn: {
-    backgroundColor: "#AAB7C2",
-    borderRadius: 25,
-    padding: 15,
-    alignItems: "center",
-  },
-  deleteText: {
-    color: "#fff",
-    fontSize: 15,
+  logoutBtnDisabled: {
+    opacity: 0.7,
   },
 });

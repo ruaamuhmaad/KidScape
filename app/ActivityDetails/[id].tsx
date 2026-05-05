@@ -20,42 +20,47 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import styles from "@/style/activityDetailsStyles";
 import { COLORS } from "@/constants/colors";
+import type {
+  ActivityDetailsRecord,
+  ActivityTabName,
+} from "@/components/activity-details/types";
+
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("Overview");
-  const [activity, setActivity] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
+  const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   const activityId = Array.isArray(id) ? id[0] : id;
 
-const fetchActivity = async () => {
-  try {
-    if (!activityId || typeof activityId !== "string") {
+  const fetchActivity = useCallback(async () => {
+    try {
+      if (!activityId || typeof activityId !== "string") {
+        setActivity(null);
+        return;
+      }
+
+      const data = await getActivityById(activityId);
+      setActivity(data);
+    } catch (error) {
+      console.log("Fetch activity error:", error);
       setActivity(null);
-      return;
+    } finally {
+      setLoading(false);
     }
+  }, [activityId]);
 
-    const data = await getActivityById(activityId);
-    setActivity(data);
-  } catch (error) {
-    console.log("Fetch activity error:", error);
-    setActivity(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
-useEffect(() => {
-  fetchActivity();
-}, [activityId]);
-
-useFocusEffect(
-  useCallback(() => {
+  useEffect(() => {
     fetchActivity();
-  }, [activityId])
-);
+  }, [fetchActivity]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchActivity();
+    }, [fetchActivity])
+  );
 
   if (loading) {
     return (
@@ -85,8 +90,8 @@ useFocusEffect(
         return <DetailsTab activity={activity} />;
       case "Costs":
         return <CostsTab activity={activity} />;
-        case "Reviews":
-              return <ReviewsTab activity={activity} />;
+      case "Reviews":
+        return <ReviewsTab activity={activity} />;
       default:
         return <OverviewTab activity={activity} />;
     }
@@ -133,22 +138,22 @@ useFocusEffect(
         {renderTab()}
       </ScrollView>
 
-  {activeTab !== "Reviews" && (
-<View style={styles.footer}>
-  <PrimaryButton
-    title="Registration Request"
-    onPress={() =>
-      router.push({
-        pathname: "/booking-form",
-        params: {
-          activity: activity.title,
-          activityId: activity.id,
-        },
-      })
-    }
-  />
-</View>
-  )}
+      {activeTab !== "Reviews" && (
+        <View style={styles.footer}>
+          <PrimaryButton
+            title="Registration Request"
+            onPress={() =>
+              router.push({
+                pathname: "/booking-form",
+                params: {
+                  activity: activity.title,
+                  activityId: activity.id,
+                },
+              })
+            }
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }

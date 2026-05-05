@@ -1,7 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { getChildrenByParentId, type ChildRecord } from "@/firebase";
+import { getCurrentUserProfile } from "@/services/authService";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,23 +15,55 @@ import {
 } from "react-native";
 
 export default function ChildListScreen() {
-  const children = [
-    {
-      id: 1,
-      name: "KARMA",
-      image: "https://i.pravatar.cc/100?img=1",
-    },
-    {
-      id: 2,
-      name: "JIHAD",
-      image: "https://i.pravatar.cc/100?img=2",
-    },
-    {
-      id: 3,
-      name: "AHMAD",
-      image: "https://i.pravatar.cc/100?img=3",
-    },
-  ];
+  const [children, setChildren] = useState<ChildRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const loadChildren = useCallback(async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+
+      setErrorMessage("");
+
+      const profile = await getCurrentUserProfile();
+
+      if (!profile.permissions.includes("children:manage")) {
+        throw new Error("You do not have permission to manage children.");
+      }
+
+      const childRecords = await getChildrenByParentId(profile.uid);
+      setChildren(childRecords);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to load children right now.";
+
+      setErrorMessage(message);
+      setChildren([]);
+
+      if (message.toLowerCase().includes("log in")) {
+        router.replace("/login" as any);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadChildren(true);
+    }, [loadChildren])
+  );
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    void loadChildren();
+  };
 
   return (
     <View style={styles.container}>
@@ -36,20 +73,62 @@ export default function ChildListScreen() {
           <Ionicons name="arrow-back" size={22} color="#1E3A46" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Child Managment</Text>
+        <Text style={styles.headerTitle}>Child Management</Text>
 
         {/* spacer للمحافظة على توسيط العنوان */}
         <View style={{ width: 22 }} />
       </View>
 
       {/* List */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {children.map((child) => (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {isLoading ? (
+          <View style={styles.statusContainer}>
+            <ActivityIndicator color="#1E3A46" />
+          </View>
+        ) : null}
+
+        {!isLoading && errorMessage ? (
+          <Text style={styles.statusText}>{errorMessage}</Text>
+        ) : null}
+
+        {!isLoading && !errorMessage && children.length === 0 ? (
+          <Text style={styles.statusText}>No children added yet.</Text>
+        ) : null}
+
+        {!isLoading && !errorMessage ? children.map((child) => (
           <View key={child.id} style={styles.card}>
-            <Image source={{ uri: child.image }} style={styles.avatar} />
+            {child.imageUrl ? (
+              <Image source={{ uri: child.imageUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>
+                  {child.name.charAt(0).toUpperCase() || "?"}
+                </Text>
+              </View>
+            )}
 
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{child.name}</Text>
+              <Text style={styles.details}>
+                {[child.gender, `${child.age} years`, child.city]
+                  .filter(Boolean)
+                  .join(" - ")}
+              </Text>
+              {child.dateOfBirth ? (
+                <Text style={styles.interests}>
+                  Date of birth: {child.dateOfBirth}
+                </Text>
+              ) : null}
+              {child.interests?.length ? (
+                <Text style={styles.interests} numberOfLines={1}>
+                  {child.interests.join(", ")}
+                </Text>
+              ) : null}
             </View>
 
             <Ionicons
@@ -58,7 +137,7 @@ export default function ChildListScreen() {
               color="#1E3A46"
             />
           </View>
-        ))}
+        )) : null}
 
         {/* Add Button */}
         <TouchableOpacity
@@ -66,7 +145,7 @@ export default function ChildListScreen() {
           onPress={() => router.push("/add-child")}
         >
           <Ionicons name="add" size={20} color="#1E3A46" />
-          <Text style={styles.addText}>Add new childern</Text>
+          <Text style={styles.addText}>Add new child</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -150,15 +229,56 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
+  avatarFallback: {
+    width: 55,
+    height: 55,
+    borderRadius: 27,
+    marginRight: 12,
+    backgroundColor: "#E6F0F3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarInitial: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E3A46",
+  },
+
   name: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1E3A46",
   },
 
+  details: {
+    color: "#48606B",
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  interests: {
+    color: "#6C7A89",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
   dash: {
     fontSize: 10,
     color: "#6C7A89",
+  },
+
+  statusContainer: {
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+
+  statusText: {
+    color: "#6C7A89",
+    fontSize: 13,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    textAlign: "center",
   },
 
   addButton: {

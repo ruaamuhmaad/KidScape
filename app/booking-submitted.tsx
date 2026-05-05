@@ -7,14 +7,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import styles from "@/style/bookingSubmittedStyles";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 export default function BookingSubmittedScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-
-  const activity = params.activity || "Sport Village";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

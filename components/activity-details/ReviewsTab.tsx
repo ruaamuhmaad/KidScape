@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React from "react";
+import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import PrimaryButton from "@/components/ui/PrimaryButton";
@@ -19,7 +19,6 @@ type Props = {
 export default function ReviewsTab({ activity }: Props) {
   const router = useRouter();
   const reviews = activity?.reviews || [];
-  const [selectedRating, setSelectedRating] = useState(0);
 
   return (
     <View style={styles.container}>
@@ -52,7 +51,7 @@ export default function ReviewsTab({ activity }: Props) {
             pathname: "/review",
             params: {
               activityId: activity.id,
-              rating: String(selectedRating),
+              rating: "0",
             },
           })
         }

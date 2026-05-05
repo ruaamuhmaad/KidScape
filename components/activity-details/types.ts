@@ -1,4 +1,4 @@
-export type ActivityTabName = 'Overview' | 'Details' | 'Costs';
+export type ActivityTabName = 'Overview' | 'Details' | 'Costs' | 'Reviews';
 
 export type OverviewIconName =
   | 'shield-checkmark'

@@ -1,8 +1,13 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
 import styles from "@/style/costsTabStyles";
+import type { ActivityDetailsRecord } from "./types";
 
-export default function CostsTab({ activity }) {
+type CostsTabProps = {
+  activity: ActivityDetailsRecord;
+};
+
+export default function CostsTab({ activity }: CostsTabProps) {
   return (
     <View style={styles.tabContent}>
       {activity.costs.map((cost, i) => (

@@ -15,7 +15,6 @@ export default function Login() {
   const handleLogin = (): void => {
     login(email, password)
       .then(() => {
-        alert("Logged in ✅");
         router.replace('/home' as any);
       })
       .catch((error: any) => {

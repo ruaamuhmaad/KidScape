@@ -1,6 +1,9 @@
-import { getUser, updateUser } from "@/api/editUserService";
 import ProfileHeader from "@/components/ProfileHeader";
 import BottomNav from "@/components/bottom-nav";
+import {
+  getCurrentUserProfile,
+  updateCurrentUserProfile,
+} from "@/services/authService";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -13,10 +16,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 
 export default function Profile() {
-  const userId = 1;
   const [parentName, setParentName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -33,7 +37,7 @@ export default function Profile() {
 
     const loadParentData = async () => {
       try {
-        const user = await getUser(userId);
+        const user = await getCurrentUserProfile();
 
         if (!isMounted) {
           return;
@@ -47,12 +51,21 @@ export default function Profile() {
         setImageUrl(user.imageUrl);
         setCity(user.City ?? user.Address.split(",")[0]?.trim() ?? "");
         setErrorMessage("");
-      } catch {
+      } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        setErrorMessage(`Unable to load user ${userId} right now.`);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to load your profile right now.";
+
+        setErrorMessage(message);
+
+        if (message.toLowerCase().includes("log in")) {
+          router.replace("/login" as any);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -65,14 +78,14 @@ export default function Profile() {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, []);
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setErrorMessage("");
 
-      await updateUser(userId, {
+      await updateCurrentUserProfile({
         PName: parentName,
         imageUrl,
         Email: email,
@@ -84,8 +97,12 @@ export default function Profile() {
 
       Alert.alert("Saved", "Profile updated successfully.");
       router.push("/profile");
-    } catch {
-      setErrorMessage(`Unable to save user ${userId} right now.`);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save your profile right now."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -93,39 +110,54 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <ProfileHeader name={parentName || undefined} imageUrl={imageUrl || undefined} />
-
-        {isLoading ? (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator color="#1E3A46" />
-          </View>
-        ) : null}
-
-        {!isLoading && errorMessage ? (
-          <Text style={styles.statusText}>{errorMessage}</Text>
-        ) : null}
-
-        <View style={styles.form}>
-          <Input label="Parent Name" value={parentName} onChangeText={setParentName} />
-          <Input label="Email" value={email} onChangeText={setEmail} />
-          <Input label="Phone Number" value={phone} onChangeText={setPhone} />
-          <Input label="Address" value={address} onChangeText={setAddress} />
-          <Input
-            label="Emergency Contact"
-            value={emergencyContact}
-            onChangeText={setEmergencyContact}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={isSaving}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={80} // ممكن تعدلها حسب الهيدر عندك
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.saveText}>{isSaving ? "Saving..." : "Save"}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <ProfileHeader
+            name={parentName || undefined}
+            imageUrl={imageUrl || undefined}
+          />
+
+          {isLoading ? (
+            <View style={styles.statusContainer}>
+              <ActivityIndicator color="#1E3A46" />
+            </View>
+          ) : null}
+
+          {!isLoading && errorMessage ? (
+            <Text style={styles.statusText}>{errorMessage}</Text>
+          ) : null}
+
+          <View style={styles.form}>
+            <Input label="Parent Name" value={parentName} onChangeText={setParentName} />
+            <Input label="Email" value={email} onChangeText={setEmail} />
+            <Input label="Phone Number" value={phone} onChangeText={setPhone} />
+            <Input label="Address" value={address} onChangeText={setAddress} />
+            <Input
+              label="Emergency Contact"
+              value={emergencyContact}
+              onChangeText={setEmergencyContact}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            <Text style={styles.saveText}>
+              {isSaving ? "Saving..." : "Save"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
       <BottomNav />
     </SafeAreaView>
   );
