@@ -101,7 +101,11 @@ export default function ChildListScreen() {
         ) : null}
 
         {!isLoading && !errorMessage ? children.map((child) => (
-          <View key={child.id} style={styles.card}>
+          <TouchableOpacity
+            key={child.id}
+            style={styles.card}
+            onPress={() => router.push(`/edit-child?id=${child.id}`)}
+          >
             {child.imageUrl ? (
               <Image source={{ uri: child.imageUrl }} style={styles.avatar} />
             ) : (
@@ -136,7 +140,7 @@ export default function ChildListScreen() {
               size={20}
               color="#1E3A46"
             />
-          </View>
+          </TouchableOpacity>
         )) : null}
 
         {/* Add Button */}

@@ -171,6 +171,18 @@ export const deleteChildFromFirebase = async (childId: string) => {
   await deleteDoc(doc(db, 'children', childId));
 };
 
+export const getChildById = async (childId: string): Promise<ChildRecord | null> => {
+  const db = getDb();
+  const childRef = doc(db, 'children', childId);
+  const childSnap = await getDoc(childRef);
+
+  if (!childSnap.exists()) {
+    return null;
+  }
+
+  return mapChild(childSnap.id, childSnap.data() as Record<string, unknown>);
+};
+
 export const getChildrenByParentId = async (parentId: string): Promise<ChildRecord[]> => {
   const db = getDb();
   const childrenQuery = query(collection(db, 'children'), where('parentId', '==', parentId));
