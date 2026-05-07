@@ -18,3 +18,4 @@ export {
   getCurrentUserProfile,
   updateCurrentUserProfile,
 } from '../firebase/userProfile';
+export { uploadCurrentUserProfileImage } from '../firebase/profileImage';

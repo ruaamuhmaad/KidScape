@@ -1,15 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 type ProfileHeaderProps = {
   name?: string;
   imageUrl?: string;
+  onImagePress?: () => void;
+  isImageLoading?: boolean;
 };
 
 export default function ProfileHeader({
   name = "Parent Name",
   imageUrl,
+  onImagePress,
+  isImageLoading = false,
 }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
@@ -23,13 +34,30 @@ export default function ProfileHeader({
         <View style={styles.spacer} />
       </View>
 
-      <View style={styles.avatar}>
+      <TouchableOpacity
+        style={[styles.avatar, !imageUrl && styles.emptyAvatar]}
+        onPress={onImagePress}
+        disabled={!onImagePress || isImageLoading}
+        activeOpacity={0.8}
+      >
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
+        ) : null}
+
+        {isImageLoading ? (
+          <View style={styles.avatarOverlay}>
+            <ActivityIndicator color="#FFFFFF" />
+          </View>
+        ) : null}
+
+        {onImagePress && !isImageLoading ? (
+          <View style={styles.cameraBadge}>
+            <Ionicons name="camera" size={18} color="#FFFFFF" />
+          </View>
         ) : (
-          <Ionicons name="person" size={60} color="#1E3A46" />
+          null
         )}
-      </View>
+      </TouchableOpacity>
 
       <Text style={styles.name}>{name}</Text>
     </View>
@@ -74,9 +102,35 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  emptyAvatar: {
+    borderWidth: 1,
+    borderColor: "#B8CAD1",
+  },
+
   avatarImage: {
     width: "100%",
     height: "100%",
+  },
+
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(30, 58, 70, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  cameraBadge: {
+    position: "absolute",
+    right: 6,
+    bottom: 6,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#1E3A46",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
 
   name: {
