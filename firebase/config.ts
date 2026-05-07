@@ -7,6 +7,7 @@ import {
   type Persistence,
 } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { Platform } from 'react-native';
 
 declare const require: (moduleName: string) => unknown;
@@ -24,6 +25,7 @@ const firebaseConfig = {
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 let auth: Auth | undefined;
+let storage: FirebaseStorage | undefined;
 
 const getNativeAuthPersistence = (): Persistence => {
   const authModule = require('firebase/auth') as {
@@ -51,6 +53,18 @@ export const getDb = (): Firestore => {
   }
 
   return db;
+};
+
+export const getFirebaseStorage = (): FirebaseStorage => {
+  if (!storage) {
+    storage = getStorage(getFirebaseApp());
+  }
+
+  if (!storage) {
+    throw new Error('Firebase Storage failed to initialize.');
+  }
+
+  return storage;
 };
 
 export const getFirebaseAuth = (): Auth => {

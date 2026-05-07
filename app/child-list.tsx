@@ -1,11 +1,16 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import BottomNav from "@/components/bottom-nav";
+import ChildCard from "@/components/ChildCard";
 import { getChildrenByParentId, type ChildRecord } from "@/firebase";
 import { getCurrentUserProfile } from "@/services/authService";
+import {
+  getErrorMessage,
+  redirectToLoginIfNeeded,
+} from "@/utils/errorHandling";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const CHILDREN_PERMISSION = "children:manage";
 
 export default function ChildListScreen() {
   const [children, setChildren] = useState<ChildRecord[]>([]);
@@ -22,32 +29,23 @@ export default function ChildListScreen() {
 
   const loadChildren = useCallback(async (showLoading = false) => {
     try {
-      if (showLoading) {
-        setIsLoading(true);
-      }
-
+      if (showLoading) setIsLoading(true);
       setErrorMessage("");
 
       const profile = await getCurrentUserProfile();
-
-      if (!profile.permissions.includes("children:manage")) {
+      if (!profile.permissions.includes(CHILDREN_PERMISSION)) {
         throw new Error("You do not have permission to manage children.");
       }
 
-      const childRecords = await getChildrenByParentId(profile.uid);
-      setChildren(childRecords);
+      setChildren(await getChildrenByParentId(profile.uid));
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to load children right now.";
-
-      setErrorMessage(message);
+      const message = getErrorMessage(
+        error,
+        "Unable to load children right now."
+      );
       setChildren([]);
-
-      if (message.toLowerCase().includes("log in")) {
-        router.replace("/login" as any);
-      }
+      setErrorMessage(message);
+      redirectToLoginIfNeeded(message);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -65,81 +63,26 @@ export default function ChildListScreen() {
     void loadChildren();
   };
 
+  const statusMessage =
+    errorMessage || (!children.length && !isLoading ? "No children added yet." : "");
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color="#1E3A46" />
-        </TouchableOpacity>
+      <ScreenHeader />
 
-        <Text style={styles.headerTitle}>Child Management</Text>
-
-        {/* spacer للمحافظة على توسيط العنوان */}
-        <View style={{ width: 22 }} />
-      </View>
-
-      {/* List */}
       <ScrollView
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
-        {isLoading ? (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator color="#1E3A46" />
-          </View>
-        ) : null}
+        {isLoading ? <LoadingState /> : null}
+        {!isLoading && statusMessage ? <StatusText message={statusMessage} /> : null}
+        {!isLoading && !statusMessage
+          ? children.map((child) => <ChildCard key={child.id} child={child} />)
+          : null}
 
-        {!isLoading && errorMessage ? (
-          <Text style={styles.statusText}>{errorMessage}</Text>
-        ) : null}
-
-        {!isLoading && !errorMessage && children.length === 0 ? (
-          <Text style={styles.statusText}>No children added yet.</Text>
-        ) : null}
-
-        {!isLoading && !errorMessage ? children.map((child) => (
-          <View key={child.id} style={styles.card}>
-            {child.imageUrl ? (
-              <Image source={{ uri: child.imageUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>
-                  {child.name.charAt(0).toUpperCase() || "?"}
-                </Text>
-              </View>
-            )}
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{child.name}</Text>
-              <Text style={styles.details}>
-                {[child.gender, `${child.age} years`, child.city]
-                  .filter(Boolean)
-                  .join(" - ")}
-              </Text>
-              {child.dateOfBirth ? (
-                <Text style={styles.interests}>
-                  Date of birth: {child.dateOfBirth}
-                </Text>
-              ) : null}
-              {child.interests?.length ? (
-                <Text style={styles.interests} numberOfLines={1}>
-                  {child.interests.join(", ")}
-                </Text>
-              ) : null}
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#1E3A46"
-            />
-          </View>
-        )) : null}
-
-        {/* Add Button */}
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push("/add-child")}
@@ -149,47 +92,30 @@ export default function ChildListScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Bottom Nav */}
-      <View style={styles.navbar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/home")}
-        >
-          <Ionicons name="home-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/")}
-        >
-          <Ionicons name="heart-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Favourites</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/notifications")}
-        >
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color="#1E3A46"
-          />
-          <Text style={styles.navText}>Notifications</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/profile")}
-        >
-          <Ionicons name="person-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav />
     </View>
   );
 }
+
+const ScreenHeader = () => (
+  <View style={styles.header}>
+    <TouchableOpacity onPress={() => router.back()}>
+      <Ionicons name="arrow-back" size={22} color="#1E3A46" />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>Child Management</Text>
+    <View style={styles.headerSpacer} />
+  </View>
+);
+
+const LoadingState = () => (
+  <View style={styles.statusContainer}>
+    <ActivityIndicator color="#1E3A46" />
+  </View>
+);
+
+const StatusText = ({ message }: { message: string }) => (
+  <Text style={styles.statusText}>{message}</Text>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -199,73 +125,25 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
 
   headerTitle: {
+    color: "#1E3A46",
     fontSize: 18,
     fontWeight: "600",
-    color: "#1E3A46",
   },
 
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#DCE3E7",
-    marginHorizontal: 20,
-    marginBottom: 15,
-    borderRadius: 15,
-    padding: 12,
+  headerSpacer: {
+    width: 22,
   },
 
-  avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27,
-    marginRight: 12,
-  },
-
-  avatarFallback: {
-    width: 55,
-    height: 55,
-    borderRadius: 27,
-    marginRight: 12,
-    backgroundColor: "#E6F0F3",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  avatarInitial: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E3A46",
-  },
-
-  name: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E3A46",
-  },
-
-  details: {
-    color: "#48606B",
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  interests: {
-    color: "#6C7A89",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  dash: {
-    fontSize: 10,
-    color: "#6C7A89",
+  listContent: {
+    paddingBottom: 90,
   },
 
   statusContainer: {
@@ -282,39 +160,19 @@ const styles = StyleSheet.create({
   },
 
   addButton: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#AFC1CC",
+    borderRadius: 25,
+    flexDirection: "row",
+    gap: 5,
+    justifyContent: "center",
     marginHorizontal: 60,
     marginTop: 20,
     paddingVertical: 12,
-    borderRadius: 25,
-    gap: 5,
   },
 
   addText: {
+    color: "#1E3A46",
     fontSize: 12,
-    color: "#1E3A46",
-  },
-
-  navbar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#AFC1CC",
-    paddingVertical: 15,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-  },
-
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  navText: {
-    fontSize: 10,
-    color: "#1E3A46",
-    marginTop: 3,
   },
 });

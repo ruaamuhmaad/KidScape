@@ -1,8 +1,8 @@
+import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { logout } from "@/services/authService";
 
 export default function ProfileActions() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
-    marginBottom: 15,
+    marginBottom: 50,
   },
   logoutText: {
     color: "#fff",
