@@ -24,6 +24,7 @@ import type {
   ActivityDetailsRecord,
   ActivityTabName,
 } from "@/components/activity-details/types";
+import { useFavorites } from "@/hooks/useFavorites";
 
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -34,6 +35,19 @@ export default function ActivityDetailsScreen() {
   const [loading, setLoading] = useState(true);
 
   const activityId = Array.isArray(id) ? id[0] : id;
+  const { favoriteIds, toggleFavorite, user } = useFavorites();
+  const isFavorite = typeof activityId === 'string' ? favoriteIds.includes(activityId) : false;
+
+  const handleToggleFavorite = () => {
+    if (!user) {
+      // Could show a toast or navigate to login
+      alert("Please log in to add to favorites");
+      return;
+    }
+    if (typeof activityId === 'string') {
+      toggleFavorite({ activityId, isFavorite });
+    }
+  };
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -108,7 +122,9 @@ export default function ActivityDetailsScreen() {
 
         <Text style={styles.headerTitle}>Activity Details</Text>
 
-        <View style={{ width: 30 }} />
+        <TouchableOpacity onPress={handleToggleFavorite} style={styles.iconBtn}>
+          <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? "#ff4d4d" : "#1a1a1a"} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView

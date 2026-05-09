@@ -8,7 +8,7 @@ type ActivityCardProps = {
   location: string;
   rating: string | number;
   imageUrl?: string;
- onPress: () => void;
+  onPress: () => void;
 };
 
 const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCardProps) => {
@@ -20,9 +20,12 @@ const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCa
     <Pressable style={styles.card} onPress={onPress}>
       <ImageBackground source={backgroundImage} style={styles.image} imageStyle={styles.imageStyle}>
         <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} style={styles.imageOverlay} />
-        <View style={styles.ratingBadge}>
-          <MaterialIcons name="star" size={14} color="#fff" />
-          <Text style={styles.ratingText}>{rating}</Text>
+        
+        <View style={styles.topRow}>
+          <View style={styles.ratingBadge}>
+            <MaterialIcons name="star" size={14} color="#fff" />
+            <Text style={styles.ratingText}>{rating}</Text>
+          </View>
         </View>
         <View style={styles.infoRow}>
           <View>
@@ -60,9 +63,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
   },
-  ratingBadge: {
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     margin: 14,
-    alignSelf: 'flex-start',
+  },
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
