@@ -18,13 +18,220 @@ import DetailsTab from "@/components/activity-details/DetailsTab";
 import CostsTab from "@/components/activity-details/CostsTab";
 import ActivityTabs from "@/components/activity-details/ActivityTabs";
 import type {
+  ActivityCost,
   ActivityDetailsRecord,
+  ActivityDetailsInfo,
+  ActivityOverviewItem,
+  ActivityReview,
   ActivityTabName,
 } from "@/components/activity-details/types";
 import { getActivityById } from "@/firebase";
 
 const BLUE = "#2C6E8A";
 const DARK = "#1a1a1a";
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80";
+const OVERVIEW_ICON_NAMES: ActivityOverviewItem["icon"][] = [
+  "shield-checkmark",
+  "calendar",
+  "people",
+  "football",
+  "location",
+  "call",
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+const isOverviewIconName = (value: unknown): value is ActivityOverviewItem["icon"] =>
+  typeof value === "string" &&
+  OVERVIEW_ICON_NAMES.includes(value as ActivityOverviewItem["icon"]);
+
+const asString = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  return fallback;
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) =>
+    typeof item === "string" && item.trim().length > 0 ? [item] : []
+  );
+};
+
+const toOverviewItems = (
+  raw: Record<string, unknown>,
+  location: string,
+  rating: string
+): ActivityOverviewItem[] => {
+  if (Array.isArray(raw.overview)) {
+    const overviewItems = raw.overview.flatMap((item) => {
+      if (!isRecord(item)) {
+        return [];
+      }
+
+      const icon = item.icon;
+      const text = asString(item.text).trim();
+
+      if (!isOverviewIconName(icon) || !text) {
+        return [];
+      }
+
+      return [{ icon, text }];
+    });
+
+    if (overviewItems.length) {
+      return overviewItems;
+    }
+  }
+
+  const schedule = asString(raw.schedule).trim();
+  const phone = asString(raw.phone ?? raw.contactNumber ?? raw.mobile).trim();
+  const ageGroup = asString(raw.ageGroup ?? raw.ageRange ?? raw.ages).trim();
+  const category = asString(raw.category ?? raw.type ?? raw.mood).trim();
+  const overview: ActivityOverviewItem[] = [];
+
+  if (location) {
+    overview.push({ icon: "location", text: `Location: ${location}` });
+  }
+
+  if (schedule) {
+    overview.push({ icon: "calendar", text: schedule });
+  }
+
+  if (ageGroup) {
+    overview.push({ icon: "people", text: `Age group: ${ageGroup}` });
+  }
+
+  if (category) {
+    overview.push({ icon: "football", text: `Category: ${category}` });
+  }
+
+  if (phone) {
+    overview.push({ icon: "call", text: `Call ${phone}` });
+  }
+
+  if (rating) {
+    overview.push({ icon: "shield-checkmark", text: `Rating: ${rating}` });
+  }
+
+  return overview.length
+    ? overview
+    : [{ icon: "shield-checkmark", text: "Details will be available soon." }];
+};
+
+const toDetailsInfo = (raw: Record<string, unknown>): ActivityDetailsInfo => ({
+  description: asString(
+    raw.description ?? raw.details ?? raw.about,
+    "No description available yet."
+  ),
+  amenities: asStringArray(raw.amenities),
+  schedule: asString(raw.schedule, "Schedule will be shared soon."),
+});
+
+const toCosts = (
+  raw: Record<string, unknown>,
+  fallbackImage: string
+): ActivityCost[] => {
+  if (Array.isArray(raw.costs)) {
+    const costs = raw.costs.flatMap((item) => {
+      if (!isRecord(item)) {
+        return [];
+      }
+
+      const label = asString(item.label ?? item.title).trim();
+      const price = asString(item.price ?? item.amount).trim();
+
+      if (!label || !price) {
+        return [];
+      }
+
+      return [
+        {
+          label,
+          price,
+          image: asString(item.image ?? item.imageUrl, fallbackImage),
+        },
+      ];
+    });
+
+    if (costs.length) {
+      return costs;
+    }
+  }
+
+  const price = asString(raw.price ?? raw.cost ?? raw.fee).trim();
+
+  return price
+    ? [{ label: "Registration", price, image: fallbackImage }]
+    : [];
+};
+
+const toReviews = (raw: Record<string, unknown>): ActivityReview[] => {
+  if (!Array.isArray(raw.reviews)) {
+    return [];
+  }
+
+  return raw.reviews.flatMap((item) => {
+    if (!isRecord(item)) {
+      return [];
+    }
+
+    const name = asString(item.name, "Anonymous");
+    const rating = Number(item.rating);
+    const comment = asString(item.comment).trim();
+
+    if (!comment) {
+      return [];
+    }
+
+    return [
+      {
+        name,
+        rating: Number.isFinite(rating) ? rating : 0,
+        comment,
+      },
+    ];
+  });
+};
+
+const normalizeActivityDetails = (value: unknown): ActivityDetailsRecord | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = asString(value.id ?? value.firestoreId).trim();
+
+  if (!id) {
+    return null;
+  }
+
+  const title = asString(value.title, "Untitled activity");
+  const location = asString(value.location);
+  const image = asString(value.image ?? value.imageUrl, FALLBACK_IMAGE);
+  const rating = asString(value.rating).trim();
+
+  return {
+    id,
+    title,
+    location,
+    image,
+    overview: toOverviewItems(value, location, rating),
+    details: toDetailsInfo(value),
+    costs: toCosts(value, image),
+    reviews: toReviews(value),
+  };
+};
 
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -48,7 +255,7 @@ export default function ActivityDetailsScreen() {
 
         const data = await getActivityById(activityId);
         console.log("Fetched activity =", data);
-        setActivity(data);
+        setActivity(normalizeActivityDetails(data));
       } catch (error) {
         console.log("Fetch activity error:", error);
         setActivity(null);

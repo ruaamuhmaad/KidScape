@@ -27,6 +27,18 @@ export interface ActivityData {
   rating: number;
   imageUrl: string;
   description?: string;
+  mood?: string;
+  emotion?: string;
+  category?: string;
+  type?: string;
+  status?: string;
+  targetMood?: string;
+  recommendedMood?: string;
+  tags?: string[];
+  moods?: string[];
+  emotions?: string[];
+  categories?: string[];
+  recommendedFor?: string[];
   createdAt?: Timestamp;
 }
 
@@ -41,8 +53,69 @@ export interface ClubData {
 }
 
 type FirebaseEntity = Record<string, unknown> & { id: string };
+type ActivityFilters = {
+  mood?: string;
+};
+
+const moodAliases: Record<string, string[]> = {
+  sad: [
+    'sad',
+    'sadness',
+    '\u062d\u0632\u064a\u0646',
+    '\u062d\u0632\u064a\u0646\u0629',
+    '\u0645\u062d\u0632\u0646',
+    '\u0645\u062d\u0632\u0646\u0629',
+  ],
+};
 
 const capitalizeName = (name: string) => name[0].toUpperCase() + name.slice(1);
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const getFilterAliases = (value: string) => {
+  const normalizedValue = normalizeText(value);
+  const aliases = moodAliases[normalizedValue] ?? [];
+
+  return new Set([normalizedValue, ...aliases.map(normalizeText)]);
+};
+
+const collectTextValues = (value: unknown): string[] => {
+  if (typeof value === 'string' && value.trim()) {
+    return [normalizeText(value)];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectTextValues(item));
+  }
+
+  return [];
+};
+
+const matchesActivityFilters = (activity: FirebaseEntity, filters: ActivityFilters) => {
+  if (!filters.mood) {
+    return true;
+  }
+
+  const acceptedValues = getFilterAliases(filters.mood);
+  const acceptedValueList = [...acceptedValues];
+  const activityValues = [
+    activity.mood,
+    activity.emotion,
+    activity.category,
+    activity.status,
+    activity.type,
+    activity.targetMood,
+    activity.recommendedMood,
+    activity.tags,
+    activity.moods,
+    activity.emotions,
+    activity.categories,
+    activity.recommendedFor,
+  ].flatMap((value) => collectTextValues(value));
+
+  return activityValues.some((value) =>
+    acceptedValueList.some((acceptedValue) => value === acceptedValue || value.includes(acceptedValue))
+  );
+};
 
 const tryCollections = async (baseName: string) => {
   const db = getDb();
@@ -146,10 +219,14 @@ export const getClubFromFirebase = async (clubId: string): Promise<FirebaseEntit
   return mapEntity(docSnapshot.id, docSnapshot.data() as Record<string, unknown>);
 };
 
-export const getAllActivitiesFromFirebase = async (): Promise<FirebaseEntity[]> => {
+export const getAllActivitiesFromFirebase = async (
+  filters: ActivityFilters = {}
+): Promise<FirebaseEntity[]> => {
   const querySnapshot = await tryCollections('activities');
 
-  return querySnapshot.docs.map((item) => mapEntity(item.id, item.data() as Record<string, unknown>));
+  return querySnapshot.docs
+    .map((item) => mapEntity(item.id, item.data() as Record<string, unknown>))
+    .filter((activity) => matchesActivityFilters(activity, filters));
 };
 
 export const getAllClubsFromFirebase = async (): Promise<FirebaseEntity[]> => {

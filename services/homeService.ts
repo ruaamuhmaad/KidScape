@@ -1,3 +1,4 @@
+import { getActivityById } from '@/firebase/activityService';
 import api from '@/services/apiBase';
 
 type RatingValue = string | number;
@@ -99,7 +100,11 @@ export const fetchClubs = async (): Promise<Club[]> => {
 
 export const fetchActivities = async (): Promise<Activity[]> => {
   try {
-    const { data } = await api.get<HomeActivityApiResponse[]>('/home/activities');
+    const { data } = await api.get<HomeActivityApiResponse[]>('/home/activities', {
+      params: {
+        mood: 'sad',
+      },
+    });
     return Array.isArray(data) ? data.map(mapActivity) : [];
   } catch (error) {
     console.warn('Error fetching activities from API', error);
