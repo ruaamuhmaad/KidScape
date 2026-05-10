@@ -1,36 +1,70 @@
+import ChildFormCard, {
+  EMPTY_CHILD_FORM,
+  type ChildFormValues,
+  type DropdownField,
+} from "@/components/ChildFormCard";
 import ProfileHeader from "@/components/ProfileHeader";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { type ComponentProps, useState } from "react";
-
+import { addChildToFirebase } from "@/firebase";
 import {
+  getCurrentUserProfile,
+  type AuthenticatedUserProfile,
+} from "@/services/authService";
+import { calculateAge } from "@/utils/childDate";
+import {
+  getErrorMessage,
+  redirectToLoginIfNeeded,
+} from "@/utils/errorHandling";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
 } from "react-native";
 
-const CITY_OPTIONS = ["Jerusalem", "Ramallah", "Nablus", "Hebron", "Bethlehem"];
-const GENDER_OPTIONS = ["Male", "Female"];
-type InterestIconName = ComponentProps<typeof Ionicons>["name"];
-
-const INTEREST_OPTIONS: { label: string; icon: InterestIconName }[] = [
-  { label: "Drawing", icon: "brush-outline" },
-  { label: "Football", icon: "football-outline" },
-  { label: "Basketball", icon: "basketball-outline" },
-  { label: "Swimming", icon: "water-outline" },
-  { label: "Martial Arts", icon: "shield-outline" },
-  { label: "Gymnastics", icon: "accessibility-outline" },
-  { label: "Singing", icon: "musical-notes-outline" },
-];
-
 export default function AddChildScreen() {
-  const [selectedCity, setSelectedCity] = useState("");
-  const [selectedGender, setSelectedGender] = useState("");
-  const [openDropdown, setOpenDropdown] = useState<"city" | "gender" | null>(null);
+  const [form, setForm] = useState<ChildFormValues>(EMPTY_CHILD_FORM);
+  const [openDropdown, setOpenDropdown] = useState<DropdownField | null>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [parentProfile, setParentProfile] =
+    useState<AuthenticatedUserProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadParentProfile = async () => {
+      try {
+        const profile = await getCurrentUserProfile();
+        if (isMounted) setParentProfile(profile);
+      } catch (error) {
+        const message = getErrorMessage(error, "Unable to load profile.");
+        if (isMounted) setErrorMessage(message);
+        redirectToLoginIfNeeded(message);
+      }
+    };
+
+    void loadParentProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const updateForm = (key: keyof ChildFormValues, value: string) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const toggleDropdown = (field: DropdownField) => {
+    setOpenDropdown((current) => (current === field ? null : field));
+  };
+
+  const selectDropdownValue = (field: DropdownField, value: string) => {
+    updateForm(field, value);
+    setOpenDropdown(null);
+  };
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests((current) =>
@@ -40,284 +74,90 @@ export default function AddChildScreen() {
     );
   };
 
+  const handleCreate = async () => {
+    const name = form.fullName.trim();
+    const dateOfBirth = form.dateOfBirth.trim();
+    const age = calculateAge(dateOfBirth);
+
+    if (!name || !form.city || !form.gender || !dateOfBirth) {
+      setErrorMessage("Please fill in all child information.");
+      return;
+    }
+
+    if (age === null) {
+      setErrorMessage("Please enter a valid date of birth.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setErrorMessage("");
+
+      const profile = await getCurrentUserProfile();
+      if (!profile.permissions.includes("children:manage")) {
+        throw new Error("You do not have permission to manage children.");
+      }
+
+      await addChildToFirebase({
+        name,
+        age,
+        city: form.city,
+        gender: form.gender,
+        dateOfBirth,
+        interests: selectedInterests,
+        parentId: profile.uid,
+      });
+
+      Alert.alert("Saved", "Child added successfully.");
+      router.replace("/child-list");
+    } catch (error) {
+      const message = getErrorMessage(error, "Unable to add child right now.");
+      setErrorMessage(message);
+      redirectToLoginIfNeeded(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <ProfileHeader />
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>My child</Text>
-
-        {/* Full name */}
-        <Text style={styles.label}>Full name</Text>
-        <TextInput
-          placeholder="enter child name"
-          style={styles.input}
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={80}
+    >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ProfileHeader
+          name={parentProfile?.PName || undefined}
+          imageUrl={parentProfile?.imageUrl || undefined}
         />
 
-        {/* City */}
-        <Text style={styles.label}>City</Text>
-        <View style={styles.dropdownWrapper}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.dropdown}
-            onPress={() =>
-              setOpenDropdown((current) => (current === "city" ? null : "city"))
-            }
-          >
-            <Text style={[styles.dropdownText, selectedCity && styles.dropdownValue]}>
-              {selectedCity || "select city"}
-            </Text>
-            <Ionicons
-              name={openDropdown === "city" ? "chevron-up" : "chevron-down"}
-              size={18}
-              color="#6C7A89"
-            />
-          </TouchableOpacity>
-
-          {openDropdown === "city" && (
-            <View style={styles.optionsList}>
-              {CITY_OPTIONS.map((city) => (
-                <TouchableOpacity
-                  key={city}
-                  style={styles.optionItem}
-                  onPress={() => {
-                    setSelectedCity(city);
-                    setOpenDropdown(null);
-                  }}
-                >
-                  <Text style={styles.optionText}>{city}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Gender */}
-        <Text style={styles.label}>Gender</Text>
-        <View style={styles.dropdownWrapper}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.dropdown}
-            onPress={() =>
-              setOpenDropdown((current) => (current === "gender" ? null : "gender"))
-            }
-          >
-            <Text
-              style={[styles.dropdownText, selectedGender && styles.dropdownValue]}
-            >
-              {selectedGender || "select gender"}
-            </Text>
-            <Ionicons
-              name={openDropdown === "gender" ? "chevron-up" : "chevron-down"}
-              size={18}
-              color="#6C7A89"
-            />
-          </TouchableOpacity>
-
-          {openDropdown === "gender" && (
-            <View style={styles.optionsList}>
-              {GENDER_OPTIONS.map((gender) => (
-                <TouchableOpacity
-                  key={gender}
-                  style={styles.optionItem}
-                  onPress={() => {
-                    setSelectedGender(gender);
-                    setOpenDropdown(null);
-                  }}
-                >
-                  <Text style={styles.optionText}>{gender}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Date of birth */}
-        <Text style={styles.label}>Date of birth</Text>
-        <TextInput
-          placeholder="enter"
-          style={styles.input}
+        <ChildFormCard
+          form={form}
+          openDropdown={openDropdown}
+          selectedInterests={selectedInterests}
+          isSaving={isSaving}
+          errorMessage={errorMessage}
+          onChange={updateForm}
+          onToggleDropdown={toggleDropdown}
+          onSelectDropdown={selectDropdownValue}
+          onToggleInterest={toggleInterest}
+          onCancel={() => router.push("/child-list")}
+          onCreate={handleCreate}
         />
-
-        {/* Interests */}
-        <Text style={styles.label}>Interests & Hobbies</Text>
-        <View style={styles.interestsList}>
-          {INTEREST_OPTIONS.map((interest) => {
-            const isSelected = selectedInterests.includes(interest.label);
-
-            return (
-              <TouchableOpacity
-                key={interest.label}
-                activeOpacity={0.8}
-                style={[
-                  styles.checkboxItem,
-                  isSelected && styles.checkboxItemSelected,
-                ]}
-                onPress={() => toggleInterest(interest.label)}
-              >
-                <View style={styles.checkboxLeft}>
-                  <Ionicons
-                    name={isSelected ? "checkbox" : "square-outline"}
-                    size={22}
-                    color="#1E3A46"
-                  />
-                  <Ionicons name={interest.icon} size={18} color="#1E3A46" />
-                  <Text style={styles.checkboxText}>{interest.label}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Buttons */}
-        <View style={styles.buttonsRow}>
-            
-          <TouchableOpacity style={styles.cancelBtn}
-            onPress={() => router.push("/child-list")}>
-            <Text style={styles.cancelText}>cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.createBtn}
-             onPress={() => router.push("/child-list")}>
-            <Text style={styles.createText}>create</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+    backgroundColor: "#F4F6F8",
+  },
+
+  content: {
+    flexGrow: 1,
     paddingBottom: 30,
     backgroundColor: "#F4F6F8",
-  },
-
-  card: {
-    backgroundColor: "#DCE3E7",
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-  },
-
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 15,
-    color: "#1E3A46",
-  },
-
-  label: {
-    fontSize: 12,
-    marginBottom: 5,
-    color: "#1E3A46",
-  },
-
-  input: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 12,
-    fontSize: 12,
-  },
-
-  dropdownWrapper: {
-    marginBottom: 12,
-  },
-
-  dropdown: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  dropdownText: {
-    fontSize: 12,
-    color: "#6C7A89",
-  },
-
-  dropdownValue: {
-    color: "#1E3A46",
-  },
-
-  optionsList: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 16,
-    marginTop: 8,
-    overflow: "hidden",
-  },
-
-  optionItem: {
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#D7DEE3",
-  },
-
-  optionText: {
-    fontSize: 12,
-    color: "#1E3A46",
-  },
-
-  interestsList: {
-    gap: 8,
-    marginBottom: 20,
-  },
-
-  checkboxItem: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-
-  checkboxItemSelected: {
-    borderWidth: 1,
-    borderColor: "#1E3A46",
-  },
-
-  checkboxLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  checkboxText: {
-    fontSize: 13,
-    color: "#1E3A46",
-  },
-
-  buttonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  cancelBtn: {
-    backgroundColor: "#6C8A96",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-  },
-
-  cancelText: {
-    color: "#fff",
-    fontSize: 12,
-  },
-
-  createBtn: {
-    backgroundColor: "#1E3A46",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-  },
-
-  createText: {
-    color: "#fff",
-    fontSize: 12,
   },
 });

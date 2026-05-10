@@ -1,30 +1,45 @@
-import { getUser, updateUser } from "@/api/editUserService";
-import ProfileHeader from "@/components/ProfileHeader";
 import BottomNav from "@/components/bottom-nav";
+import CustomInput from "@/components/CustomInput";
+import ProfileHeader from "@/components/ProfileHeader";
+import {
+  pickImageFromGallery,
+  takePhotoWithCamera,
+  uploadImageToCloudinary,
+} from "@/firebase";
+import { getCurrentUserProfile, updateCurrentUserProfile } from "@/services/authService";
+import {
+  getErrorMessage,
+  redirectToLoginIfNeeded,
+} from "@/utils/errorHandling";
+import {
+  buildProfilePayload,
+  EMPTY_PROFILE_FORM,
+  mapProfileToForm,
+  PROFILE_FIELDS,
+  type ProfileForm,
+} from "@/utils/profileForm";
+import type { ImagePickerAsset } from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
+type ImageGetter = () => Promise<ImagePickerAsset | null>;
+
 export default function Profile() {
-  const userId = 1;
-  const [parentName, setParentName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [emergencyContact, setEmergencyContact] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [form, setForm] = useState<ProfileForm>(EMPTY_PROFILE_FORM);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -33,113 +48,137 @@ export default function Profile() {
 
     const loadParentData = async () => {
       try {
-        const user = await getUser(userId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setParentName(user.PName);
-        setEmail(user.Email);
-        setPhone(user.Phone);
-        setAddress(user.Address);
-        setEmergencyContact(user.EmergencyNumber);
-        setImageUrl(user.imageUrl);
-        setCity(user.City ?? user.Address.split(",")[0]?.trim() ?? "");
-        setErrorMessage("");
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setErrorMessage(`Unable to load user ${userId} right now.`);
-      } finally {
+        const profile = await getCurrentUserProfile();
         if (isMounted) {
-          setIsLoading(false);
+          setForm(mapProfileToForm(profile));
+          setErrorMessage("");
         }
+      } catch (error) {
+        const message = getErrorMessage(
+          error,
+          "Unable to load your profile right now."
+        );
+        if (isMounted) setErrorMessage(message);
+        redirectToLoginIfNeeded(message);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    loadParentData();
-
+    void loadParentData();
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, []);
+
+  const updateField = (key: keyof ProfileForm, value: string) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const saveProfile = (nextForm = form) =>
+    updateCurrentUserProfile(buildProfilePayload(nextForm));
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setErrorMessage("");
-
-      await updateUser(userId, {
-        PName: parentName,
-        imageUrl,
-        Email: email,
-        Phone: phone,
-        Address: address,
-        EmergencyNumber: emergencyContact,
-        City: city,
-      });
-
+      await saveProfile();
       Alert.alert("Saved", "Profile updated successfully.");
       router.push("/profile");
-    } catch {
-      setErrorMessage(`Unable to save user ${userId} right now.`);
+    } catch (error) {
+      setErrorMessage(
+        getErrorMessage(error, "Unable to save your profile right now.")
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
+  const selectAndUploadProfileImage = async (getImage: ImageGetter) => {
+    try {
+      setIsUploadingImage(true);
+      setErrorMessage("");
+
+      const asset = await getImage();
+      if (!asset) return;
+
+      const imageUrl = await uploadImageToCloudinary(asset);
+      const nextForm = { ...form, imageUrl };
+
+      setForm(nextForm);
+      await saveProfile(nextForm);
+    } catch (error) {
+      setErrorMessage(
+        getErrorMessage(error, "Unable to upload your profile photo right now.")
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handlePickProfileImage = () => {
+    Alert.alert("Profile photo", "Choose image source", [
+      {
+        text: "Gallery",
+        onPress: () => void selectAndUploadProfileImage(pickImageFromGallery),
+      },
+      {
+        text: "Camera",
+        onPress: () => void selectAndUploadProfileImage(takePhotoWithCamera),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <ProfileHeader name={parentName || undefined} imageUrl={imageUrl || undefined} />
-
-        {isLoading ? (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator color="#1E3A46" />
-          </View>
-        ) : null}
-
-        {!isLoading && errorMessage ? (
-          <Text style={styles.statusText}>{errorMessage}</Text>
-        ) : null}
-
-        <View style={styles.form}>
-          <Input label="Parent Name" value={parentName} onChangeText={setParentName} />
-          <Input label="Email" value={email} onChangeText={setEmail} />
-          <Input label="Phone Number" value={phone} onChangeText={setPhone} />
-          <Input label="Address" value={address} onChangeText={setAddress} />
-          <Input
-            label="Emergency Contact"
-            value={emergencyContact}
-            onChangeText={setEmergencyContact}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={80}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ProfileHeader
+            name={form.parentName || undefined}
+            imageUrl={form.imageUrl || undefined}
+            onImagePress={handlePickProfileImage}
+            isImageLoading={isUploadingImage}
           />
-        </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text style={styles.saveText}>{isSaving ? "Saving..." : "Save"}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {isLoading ? <LoadingState /> : null}
+          {!isLoading && errorMessage ? (
+            <Text style={styles.statusText}>{errorMessage}</Text>
+          ) : null}
+
+          <View style={styles.form}>
+            {PROFILE_FIELDS.map((field) => (
+              <CustomInput
+                key={field.key}
+                label={field.label}
+                value={form[field.key]}
+                onChangeText={(value) => updateField(field.key, value)}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, isSaving && styles.disabled]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            <Text style={styles.saveText}>{isSaving ? "Saving..." : "Save"}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
       <BottomNav />
     </SafeAreaView>
   );
 }
 
-const Input = ({ label, value, onChangeText }: any) => (
-  <View style={styles.inputContainer}>
-    <Text style={styles.label}>{label}</Text>
-    <TextInput
-      style={styles.input}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={`Enter ${label}`}
-    />
+const LoadingState = () => (
+  <View style={styles.statusContainer}>
+    <ActivityIndicator color="#1E3A46" />
   </View>
 );
 
@@ -148,50 +187,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F4F6F8",
   },
+
+  keyboardView: {
+    flex: 1,
+  },
+
   content: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
+
   statusContainer: {
     alignItems: "center",
-    marginTop: -10,
     marginBottom: 20,
+    marginTop: -10,
   },
+
   statusText: {
-    textAlign: "center",
     color: "#6C7A89",
-    marginTop: -10,
     marginBottom: 20,
+    marginTop: -10,
+    textAlign: "center",
   },
+
   form: {
-    marginTop: 10,
     gap: 15,
+    marginTop: 10,
   },
-  inputContainer: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    color: "#1E3A46",
-    fontWeight: "500",
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D0D7DD",
-  },
+
   saveBtn: {
-    marginTop: 30,
-    backgroundColor: "#1E3A46",
-    padding: 16,
-    borderRadius: 12,
     alignItems: "center",
+    backgroundColor: "#1E3A46",
+    borderRadius: 12,
+    marginTop: 30,
+    padding: 16,
   },
-  saveBtnDisabled: {
+
+  disabled: {
     opacity: 0.7,
   },
+
   saveText: {
     color: "#FFF",
     fontSize: 16,

@@ -1,17 +1,18 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import type { Dispatch, SetStateAction } from "react";
-
 import type { ActivityTabName } from "./types";
 
-const TABS: ActivityTabName[] = ["Overview", "Details", "Costs"];
+const TABS: ActivityTabName[] = ["Overview", "Details", "Costs", "Reviews"];
 
 type ActivityTabsProps = {
   activeTab: ActivityTabName;
-  setActiveTab: Dispatch<SetStateAction<ActivityTabName>>;
+  setActiveTab: (tab: ActivityTabName) => void;
 };
 
-export default function ActivityTabs({ activeTab, setActiveTab }: ActivityTabsProps) {
+export default function ActivityTabs({
+  activeTab,
+  setActiveTab,
+}: ActivityTabsProps) {
   return (
     <View style={styles.tabBar}>
       {TABS.map((tab) => (

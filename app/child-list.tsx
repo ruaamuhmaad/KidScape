@@ -1,7 +1,17 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import BottomNav from "@/components/bottom-nav";
+import ChildCard from "@/components/ChildCard";
+import { getChildrenByParentId, type ChildRecord } from "@/firebase";
+import { getCurrentUserProfile } from "@/services/authService";
 import {
-  Image,
+  getErrorMessage,
+  redirectToLoginIfNeeded,
+} from "@/utils/errorHandling";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,108 +19,103 @@ import {
   View,
 } from "react-native";
 
+const CHILDREN_PERMISSION = "children:manage";
+
 export default function ChildListScreen() {
-  const children = [
-    {
-      id: 1,
-      name: "KARMA",
-      image: "https://i.pravatar.cc/100?img=1",
-    },
-    {
-      id: 2,
-      name: "JIHAD",
-      image: "https://i.pravatar.cc/100?img=2",
-    },
-    {
-      id: 3,
-      name: "AHMAD",
-      image: "https://i.pravatar.cc/100?img=3",
-    },
-  ];
+  const [children, setChildren] = useState<ChildRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const loadChildren = useCallback(async (showLoading = false) => {
+    try {
+      if (showLoading) setIsLoading(true);
+      setErrorMessage("");
+
+      const profile = await getCurrentUserProfile();
+      if (!profile.permissions.includes(CHILDREN_PERMISSION)) {
+        throw new Error("You do not have permission to manage children.");
+      }
+
+      setChildren(await getChildrenByParentId(profile.uid));
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        "Unable to load children right now."
+      );
+      setChildren([]);
+      setErrorMessage(message);
+      redirectToLoginIfNeeded(message);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadChildren(true);
+    }, [loadChildren])
+  );
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    void loadChildren();
+  };
+
+  const statusMessage =
+    errorMessage || (!children.length && !isLoading ? "No children added yet." : "");
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color="#1E3A46" />
-        </TouchableOpacity>
+      <ScreenHeader />
 
-        <Text style={styles.headerTitle}>Child Managment</Text>
+      <ScrollView
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {isLoading ? <LoadingState /> : null}
+        {!isLoading && statusMessage ? <StatusText message={statusMessage} /> : null}
+        {!isLoading && !statusMessage
+          ? children.map((child) => <ChildCard key={child.id} child={child} />)
+          : null}
 
-        {/* spacer للمحافظة على توسيط العنوان */}
-        <View style={{ width: 22 }} />
-      </View>
-
-      {/* List */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {children.map((child) => (
-          <View key={child.id} style={styles.card}>
-            <Image source={{ uri: child.image }} style={styles.avatar} />
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{child.name}</Text>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#1E3A46"
-            />
-          </View>
-        ))}
-
-        {/* Add Button */}
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push("/add-child")}
         >
           <Ionicons name="add" size={20} color="#1E3A46" />
-          <Text style={styles.addText}>Add new childern</Text>
+          <Text style={styles.addText}>Add new child</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Bottom Nav */}
-      <View style={styles.navbar}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/home")}
-        >
-          <Ionicons name="home-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/")}
-        >
-          <Ionicons name="heart-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Favourites</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/notifications")}
-        >
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color="#1E3A46"
-          />
-          <Text style={styles.navText}>Notifications</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/profile")}
-        >
-          <Ionicons name="person-outline" size={22} color="#1E3A46" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav />
     </View>
   );
 }
+
+const ScreenHeader = () => (
+  <View style={styles.header}>
+    <TouchableOpacity onPress={() => router.back()}>
+      <Ionicons name="arrow-back" size={22} color="#1E3A46" />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>Child Management</Text>
+    <View style={styles.headerSpacer} />
+  </View>
+);
+
+const LoadingState = () => (
+  <View style={styles.statusContainer}>
+    <ActivityIndicator color="#1E3A46" />
+  </View>
+);
+
+const StatusText = ({ message }: { message: string }) => (
+  <Text style={styles.statusText}>{message}</Text>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -120,81 +125,54 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
 
   headerTitle: {
+    color: "#1E3A46",
     fontSize: 18,
     fontWeight: "600",
-    color: "#1E3A46",
   },
 
-  card: {
-    flexDirection: "row",
+  headerSpacer: {
+    width: 22,
+  },
+
+  listContent: {
+    paddingBottom: 90,
+  },
+
+  statusContainer: {
     alignItems: "center",
-    backgroundColor: "#DCE3E7",
-    marginHorizontal: 20,
-    marginBottom: 15,
-    borderRadius: 15,
-    padding: 12,
+    paddingVertical: 30,
   },
 
-  avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27,
-    marginRight: 12,
-  },
-
-  name: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E3A46",
-  },
-
-  dash: {
-    fontSize: 10,
+  statusText: {
     color: "#6C7A89",
+    fontSize: 13,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    textAlign: "center",
   },
 
   addButton: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#AFC1CC",
+    borderRadius: 25,
+    flexDirection: "row",
+    gap: 5,
+    justifyContent: "center",
     marginHorizontal: 60,
     marginTop: 20,
     paddingVertical: 12,
-    borderRadius: 25,
-    gap: 5,
   },
 
   addText: {
+    color: "#1E3A46",
     fontSize: 12,
-    color: "#1E3A46",
-  },
-
-  navbar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#AFC1CC",
-    paddingVertical: 15,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-  },
-
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  navText: {
-    fontSize: 10,
-    color: "#1E3A46",
-    marginTop: 3,
   },
 });

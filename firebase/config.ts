@@ -1,41 +1,50 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import {
+  getAuth,
+  initializeAuth,
+  type Auth,
+  type Persistence,
+} from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
 
-const getRequiredEnv = (name: string) => {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-};
+declare const require: (moduleName: string) => unknown;
 
 const firebaseConfig = {
-  apiKey: getRequiredEnv('EXPO_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: getRequiredEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  projectId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: getRequiredEnv('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_APP_ID'),
-  measurementId: getRequiredEnv('EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID'),
+  apiKey: 'AIzaSyAELadlP3Bh5cT6qET8cG8q7_QW6q3DCQc',
+  authDomain: 'kidscape-6ac7b.firebaseapp.com',
+  projectId: 'kidscape-6ac7b',
+  storageBucket: 'kidscape-6ac7b.firebasestorage.app',
+  messagingSenderId: '270750415295',
+  appId: '1:270750415295:web:35079669f127a357b8c90a',
+  measurementId: 'G-38KV7462H4',
 };
 
 let app: FirebaseApp | undefined;
-export let db: Firestore | undefined;
+let db: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
+let auth: Auth | undefined;
+const getNativeAuthPersistence = (): Persistence => {
+  const authModule = require('firebase/auth') as {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+  };
 
-const initFirebase = () => {
-  if (typeof window === 'undefined') {
-    throw new Error('Firebase can only be initialized on the client side.');
+  return authModule.getReactNativePersistence(AsyncStorage);
+};
+
+export const getFirebaseApp = (db: () => FirebaseApp): FirebaseApp => {
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   }
 
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  return app;
 };
 
 export const getDb = (): Firestore => {
   if (!db) {
-    initFirebase();
+    db = getFirestore(getFirebaseApp());
   }
 
   if (!db) {
@@ -45,4 +54,36 @@ export const getDb = (): Firestore => {
   return db;
 };
 
-export default getDb;
+export const getFirebaseStorage = (): FirebaseStorage => {
+  if (!storage) {
+    storage = getStorage(getFirebaseApp());
+  }
+
+  if (!storage) {
+    throw new Error('Firebase Storage failed to initialize.');
+  }
+
+  return storage;
+};
+
+export const getFirebaseAuth = (): Auth => {
+  if (!auth) {
+    const firebaseApp = getFirebaseApp();
+
+    if (Platform.OS === 'web') {
+      auth = getAuth(firebaseApp);
+    } else {
+      try {
+        auth = initializeAuth(firebaseApp, {
+          persistence: getNativeAuthPersistence(),
+        });
+      } catch {
+        auth = getAuth(firebaseApp);
+      }
+    }
+  }
+
+  return auth;
+};
+
+export default getFirebaseApp;
