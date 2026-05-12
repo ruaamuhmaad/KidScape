@@ -1,5 +1,4 @@
 import BottomNav from "@/components/bottom-nav";
-import CustomInput from "@/components/CustomInput";
 import ProfileHeader from "@/components/ProfileHeader";
 import {
   pickImageFromGallery,
@@ -30,6 +29,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -152,7 +152,7 @@ export default function Profile() {
 
           <View style={styles.form}>
             {PROFILE_FIELDS.map((field) => (
-              <CustomInput
+              <ProfileField
                 key={field.key}
                 label={field.label}
                 value={form[field.key]}
@@ -179,6 +179,25 @@ export default function Profile() {
 const LoadingState = () => (
   <View style={styles.statusContainer}>
     <ActivityIndicator color="#1E3A46" />
+  </View>
+);
+
+type ProfileFieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+};
+
+const ProfileField = ({ label, value, onChangeText }: ProfileFieldProps) => (
+  <View style={styles.field}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={`Enter ${label}`}
+      placeholderTextColor="#6C7A89"
+      style={styles.fieldInput}
+    />
   </View>
 );
 
@@ -213,6 +232,24 @@ const styles = StyleSheet.create({
   form: {
     gap: 15,
     marginTop: 10,
+  },
+
+  field: {
+    gap: 6,
+  },
+
+  fieldLabel: {
+    color: "#1E3A46",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  fieldInput: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#D0D7DD",
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 14,
   },
 
   saveBtn: {
