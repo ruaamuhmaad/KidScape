@@ -16,7 +16,7 @@ export default function Onboarding3() {
         other parents, and create lasting memories. Let’s begin!
       </Text>
 
-      {/* Image 🔥 */}
+      {/* Image */}
       <Image
         source={require('../assets/images/onboarding3.png')}
         style={styles.image}
@@ -28,6 +28,9 @@ export default function Onboarding3() {
         <View style={styles.dot} />
         <View style={[styles.dot, styles.activeDot]} />
       </View>
+
+      {/* Spacer */}
+      <View style={styles.spacer} />
 
       {/* Button */}
       <TouchableOpacity
@@ -46,7 +49,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f3f5f7',
     paddingTop: 80,
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
+    paddingBottom: 35,
   },
 
   title: {
@@ -76,7 +80,11 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 40
+    marginBottom: 20
+  },
+
+  spacer: {
+    flex: 1,
   },
 
   dot: {

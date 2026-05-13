@@ -37,6 +37,9 @@ export default function Onboarding1() {
         <View style={styles.dot} />
       </View>
 
+      {/* Space pushes button down */}
+      <View style={styles.spacer} />
+
       {/* Button */}
       <TouchableOpacity
         style={styles.button}
@@ -55,7 +58,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f5f7',
     paddingTop: 60,
     paddingHorizontal: 20,
-    justifyContent: 'flex-start'
+    paddingBottom: 35,
   },
 
   skip: {
@@ -92,7 +95,11 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 40
+    marginBottom: 20
+  },
+
+  spacer: {
+    flex: 1,
   },
 
   dot: {
