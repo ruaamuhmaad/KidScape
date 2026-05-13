@@ -24,9 +24,8 @@ const firebaseConfig = {
 
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
-let auth: Auth | undefined;
 let storage: FirebaseStorage | undefined;
-
+let auth: Auth | undefined;
 const getNativeAuthPersistence = (): Persistence => {
   const authModule = require('firebase/auth') as {
     getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
@@ -35,7 +34,7 @@ const getNativeAuthPersistence = (): Persistence => {
   return authModule.getReactNativePersistence(AsyncStorage);
 };
 
-export const getFirebaseApp = (): FirebaseApp => {
+export const getFirebaseApp = (db: () => FirebaseApp): FirebaseApp => {
   if (!app) {
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   }

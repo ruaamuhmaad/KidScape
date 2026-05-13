@@ -11,9 +11,27 @@ import { HOME_API_ENDPOINTS, withApiPrefix } from './endpoints';
 type ApiMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 type ApiHandler = (config: AxiosRequestConfig) => Promise<unknown>;
 
+const getFirstStringParam = (value: unknown): string | undefined => {
+  if (typeof value === 'string' && value.trim()) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const firstString = value.find(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0
+    );
+    return firstString;
+  }
+
+  return undefined;
+};
+
 const endpointHandlers: Record<string, Partial<Record<ApiMethod, ApiHandler>>> = {
   [withApiPrefix(HOME_API_ENDPOINTS.activities)]: {
-    get: async () => getAllActivitiesFromFirebase(),
+    get: async (config) =>
+      getAllActivitiesFromFirebase({
+        mood: getFirstStringParam(config.params?.mood),
+      }),
   },
   [withApiPrefix(HOME_API_ENDPOINTS.clubs)]: {
     get: async () => getAllClubsFromFirebase(),

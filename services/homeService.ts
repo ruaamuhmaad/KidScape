@@ -19,6 +19,7 @@ type HomeActivityApiResponse = {
   description?: string;
   rating?: RatingValue;
   imageUrl?: string;
+  image?: string;
 };
 
 const asString = (value: unknown, fallback = ''): string => {
@@ -74,7 +75,7 @@ const mapActivity = (activity: HomeActivityApiResponse): Activity => ({
   location: asString(activity.location),
   description: asString(activity.description),
   rating: asRating(activity.rating),
-  imageUrl: asString(activity.imageUrl),
+  imageUrl: asString(activity.imageUrl ?? activity.image),
 });
 
 export const fetchInterests = async (): Promise<string[]> => {
