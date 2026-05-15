@@ -64,6 +64,8 @@ type ActivityFilters = {
   mood?: string;
 };
 
+export type ActivitySource = 'guest' | 'child';
+
 const moodAliases: Record<string, string[]> = {
   sad: [
     'sad',
@@ -77,6 +79,18 @@ const moodAliases: Record<string, string[]> = {
 
 const capitalizeName = (name: string) => name[0].toUpperCase() + name.slice(1);
 const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const collectionAliases: Record<string, string[]> = {
+  activities: ['activities', 'Activities'],
+  childActivities: ['AllActivities', 'allActivities'],
+  clubs: ['clubs', 'Clubs'],
+  interests: ['interests', 'Interests'],
+};
+
+const getCollectionNames = (baseName: string) => {
+  const names = collectionAliases[baseName] ?? [baseName, capitalizeName(baseName)];
+  return [...new Set(names)];
+};
 
 const getFilterAliases = (value: string) => {
   const normalizedValue = normalizeText(value);
@@ -126,7 +140,7 @@ const matchesActivityFilters = (activity: FirebaseEntity, filters: ActivityFilte
 
 const tryCollections = async (baseName: string) => {
   const db = getDb();
-  const names = [baseName, capitalizeName(baseName)];
+  const names = getCollectionNames(baseName);
 
   for (const name of names) {
     const snapshot = await getDocs(collection(db, name));
@@ -140,7 +154,7 @@ const tryCollections = async (baseName: string) => {
 
 const tryDocFromCollections = async (baseName: string, id: string) => {
   const db = getDb();
-  const names = [baseName, capitalizeName(baseName)];
+  const names = getCollectionNames(baseName);
 
   for (const name of names) {
     const docSnapshot = await getDoc(doc(db, name, id));
@@ -272,17 +286,70 @@ export const getClubFromFirebase = async (clubId: string): Promise<FirebaseEntit
     return null;
   }
 
-  return mapEntity(docSnapshot.id, docSnapshot.data() as Record<string, unknown>);
+  const rawData = docSnapshot.data() as Record<string, unknown>;
+
+  // Normalize description: prefer explicit description, otherwise try details.about
+  let description: string | undefined = undefined;
+
+  if (typeof rawData.description === 'string' && rawData.description.trim()) {
+    description = rawData.description as string;
+  } else if (
+    rawData.details &&
+    typeof rawData.details === 'object' &&
+    typeof (rawData.details as Record<string, unknown>).about === 'string' &&
+    ((rawData.details as Record<string, unknown>).about as string).trim()
+  ) {
+    description = ((rawData.details as Record<string, unknown>).about as string).trim();
+  }
+
+  const normalized = {
+    ...rawData,
+    ...(description ? { description } : {}),
+  } as Record<string, unknown>;
+
+  return mapEntity(docSnapshot.id, normalized);
 };
 
 export const getAllActivitiesFromFirebase = async (
-  filters: ActivityFilters = {}
+  filters: ActivityFilters = {},
+  source: ActivitySource = 'guest'
 ): Promise<FirebaseEntity[]> => {
-  const querySnapshot = await tryCollections('activities');
+  const querySnapshot = await tryCollections(source === 'child' ? 'childActivities' : 'activities');
 
   return querySnapshot.docs
     .map((item) => mapEntity(item.id, item.data() as Record<string, unknown>))
     .filter((activity) => matchesActivityFilters(activity, filters));
+};
+
+export const getInterestActivitiesFromFirebase = async (interest: string): Promise<FirebaseEntity[]> => {
+  const normalizedInterest = normalizeText(interest);
+  const querySnapshot = await tryCollections('childActivities');
+
+  return querySnapshot.docs
+    .map((item) => mapEntity(item.id, item.data() as Record<string, unknown>))
+    .filter((activity) => {
+      const values = [
+        activity.category,
+        activity.categories,
+        activity.recommendedFor,
+        activity.type,
+        activity.title,
+      ].flatMap((value) => collectTextValues(value));
+
+      return values.some((value) => value.includes(normalizedInterest));
+    });
+};
+
+export const getInterestDescriptionFromFirebase = async (interest: string): Promise<string> => {
+  const db = getDb();
+  const docSnapshot = await getDoc(doc(db, 'interests', interest));
+
+  if (!docSnapshot.exists()) {
+    return 'No description available';
+  }
+
+  const data = docSnapshot.data() as Record<string, unknown>;
+  return typeof data.description === 'string' ? data.description : 'No description available';
 };
 
 export const getAllClubsFromFirebase = async (): Promise<FirebaseEntity[]> => {
@@ -327,7 +394,19 @@ const getInterestsFromInterestsCollection = async () => {
   }
 
   const docData = querySnapshot.docs[0].data() as Record<string, unknown>;
-  return extractInterests(docData) ?? [];
+  const interestsArray = extractInterests(docData);
+
+  if (interestsArray) {
+    return interestsArray;
+  }
+
+  return querySnapshot.docs
+    .map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      const name = data.name ?? data.title ?? item.id;
+      return typeof name === 'string' && name.trim() ? name : null;
+    })
+    .filter((item): item is string => item !== null);
 };
 
 export const getInterestsFromFirebase = async (): Promise<string[]> => {

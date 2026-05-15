@@ -5,11 +5,13 @@ import {
   fetchClubs,
   fetchInterests,
   type Activity,
+  type ActivitySource,
   type Club,
+  type Interest,
 } from '@/services/homeService';
 
 export const homeQueryKeys = {
-  activities: ['home', 'activities'] as const,
+  activities: (source: ActivitySource) => ['home', 'activities', source] as const,
   clubs: ['home', 'clubs'] as const,
   interests: ['home', 'interests'] as const,
 };
@@ -17,7 +19,7 @@ export const homeQueryKeys = {
 type HomeQueriesResult = {
   activities: Activity[];
   clubs: Club[];
-  interests: string[];
+  interests: Interest[];
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -25,12 +27,12 @@ type HomeQueriesResult = {
   refetchHomeData: () => Promise<void>;
 };
 
-export const useHomeQueries = (): HomeQueriesResult => {
+export const useHomeQueries = (activitySource: ActivitySource): HomeQueriesResult => {
   const [activitiesQuery, clubsQuery, interestsQuery] = useQueries({
     queries: [
       {
-        queryKey: homeQueryKeys.activities,
-        queryFn: fetchActivities,
+        queryKey: homeQueryKeys.activities(activitySource),
+        queryFn: () => fetchActivities(activitySource),
       },
       {
         queryKey: homeQueryKeys.clubs,

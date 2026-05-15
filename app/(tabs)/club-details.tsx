@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getClubFromFirebase } from '@/firebase';
+import { fetchClubById } from '@/services/homeService';
 
 interface ClubDetail {
   id: string;
@@ -36,7 +36,7 @@ export default function ClubDetailsScreen() {
         return;
       }
 
-      const fetchedClub = await getClubFromFirebase(clubId);
+      const fetchedClub = await fetchClubById(clubId);
       setClub(fetchedClub as ClubDetail | null);
       setLoading(false);
     };
@@ -100,9 +100,6 @@ export default function ClubDetailsScreen() {
             <Ionicons name="star" size={16} color="#F5B400" />
             <Text style={styles.rating}>{club.rating}</Text>
           </View>
-
-          <Text style={styles.sectionLabel}>About this club</Text>
-          <Text style={styles.description}>{club.description}</Text>
 
           <Text style={styles.sectionLabel}>Details</Text>
           <Text style={styles.description}>{club.details}</Text>

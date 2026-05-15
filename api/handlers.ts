@@ -1,8 +1,12 @@
 import type { AxiosRequestConfig } from 'axios';
 
 import {
+  type ActivitySource,
   getAllActivitiesFromFirebase,
   getAllClubsFromFirebase,
+  getClubFromFirebase,
+  getInterestActivitiesFromFirebase,
+  getInterestDescriptionFromFirebase,
   getInterestsFromFirebase,
 } from '@/firebase';
 
@@ -26,18 +30,44 @@ const getFirstStringParam = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const getActivitySourceParam = (value: unknown): ActivitySource => {
+  const source = getFirstStringParam(value);
+  return source === 'child' ? 'child' : 'guest';
+};
+
 const endpointHandlers: Record<string, Partial<Record<ApiMethod, ApiHandler>>> = {
   [withApiPrefix(HOME_API_ENDPOINTS.activities)]: {
     get: async (config) =>
-      getAllActivitiesFromFirebase({
-        mood: getFirstStringParam(config.params?.mood),
-      }),
+      getAllActivitiesFromFirebase(
+        {
+          mood: getFirstStringParam(config.params?.mood),
+        },
+        getActivitySourceParam(config.params?.source)
+      ),
   },
   [withApiPrefix(HOME_API_ENDPOINTS.clubs)]: {
     get: async () => getAllClubsFromFirebase(),
   },
+  [withApiPrefix(HOME_API_ENDPOINTS.clubDetails)]: {
+    get: async (config) => {
+      const id = getFirstStringParam(config.params?.id);
+      return id ? getClubFromFirebase(id) : null;
+    },
+  },
   [withApiPrefix(HOME_API_ENDPOINTS.interests)]: {
     get: async () => getInterestsFromFirebase(),
+  },
+  [withApiPrefix(HOME_API_ENDPOINTS.interestDetails)]: {
+    get: async (config) => {
+      const interest = getFirstStringParam(config.params?.interest) ?? 'Sport';
+
+      const [description, activities] = await Promise.all([
+        getInterestDescriptionFromFirebase(interest),
+        getInterestActivitiesFromFirebase(interest),
+      ]);
+
+      return { description, activities };
+    },
   },
 };
 

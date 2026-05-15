@@ -236,7 +236,7 @@ const normalizeActivityDetails = (value: unknown): ActivityDetailsRecord | null 
 };
 
 export default function ActivityDetailsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, source } = useLocalSearchParams();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
@@ -244,6 +244,7 @@ export default function ActivityDetailsScreen() {
   const [loading, setLoading] = useState(true);
 
   const activityId = Array.isArray(id) ? id[0] : id;
+  const activitySource = (Array.isArray(source) ? source[0] : source) === "child" ? "child" : "guest";
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -252,7 +253,7 @@ export default function ActivityDetailsScreen() {
         return;
       }
 
-      const data = await getActivityById(activityId);
+      const data = await getActivityById(activityId, activitySource);
       setActivity(normalizeActivityDetails(data));
     } catch (error) {
       console.log("Fetch activity error:", error);
@@ -260,7 +261,7 @@ export default function ActivityDetailsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activityId]);
+  }, [activityId, activitySource]);
 
   useEffect(() => {
     fetchActivity();

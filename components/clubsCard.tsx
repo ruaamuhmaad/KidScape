@@ -68,6 +68,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     shadowColor: '#000',
   },
+  about:{
+    color: '#4B5C6B',
+    fontSize: 13,
+    marginBottom: 4,  
+  },
   imageContainer: {
     width: 100,
     height: 100,
@@ -100,27 +105,10 @@ const styles = StyleSheet.create({
     padding: 14,
     justifyContent: 'center',
   },
-  title: {
-    color: '#183B4E',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  details: {
-    color: '#4B5C6B',
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationText: {
-    color: '#183B4E',
-    marginLeft: 6,
-    fontSize: 13,
-    fontWeight: '400',
-  },
+  title: {color: '#183B4E',fontSize: 16,fontWeight: '700',marginBottom: 6,},
+  details: {color: '#4B5C6B',fontSize: 14,marginBottom: 10,},
+  locationRow: {flexDirection: 'row',alignItems: 'center',},
+locationText: { color: '#183B4E',marginLeft: 6,fontSize: 13,fontWeight: '400',},
 });
 
 export default ClubsCard;
