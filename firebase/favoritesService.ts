@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getDb } from './config';
+import { sendNotification } from './notificationService';
 
 export const getFavorites = async (userId: string): Promise<string[]> => {
   const db = getDb();
@@ -29,6 +30,13 @@ export const addFavorite = async (userId: string, activityId: string): Promise<v
       activities: arrayUnion(activityId),
     });
   }
+
+  await sendNotification(
+    userId,
+    "Favorite Added",
+    "Added to favorites",
+    "favorite_added"
+  );
 };
 
 export const removeFavorite = async (userId: string, activityId: string): Promise<void> => {

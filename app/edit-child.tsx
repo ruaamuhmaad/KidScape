@@ -172,7 +172,7 @@ export default function EditChildScreen() {
         updateData.imageUrl = imageUrl.trim();
       }
 
-      await updateChildInFirebase(childId!, updateData);
+      await updateChildInFirebase(childId!, updateData, profile.uid);
 
       Alert.alert("Saved", "Child profile updated successfully.");
       router.push("/child-list");

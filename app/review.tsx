@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { submitReview } from "@/firebase/reviewService";
+import { getFirebaseAuth } from "@/firebase/config";
 
 export default function ReviewScreen() {
   const router = useRouter();
@@ -35,7 +36,15 @@ export default function ReviewScreen() {
     }
 
     try {
-      await submitReview({
+      const auth = getFirebaseAuth();
+      const userId = auth.currentUser?.uid;
+
+      if (!userId) {
+        Alert.alert("Error", "You must be logged in to add a review.");
+        return;
+      }
+
+      await submitReview(userId, {
         activityId,
         rating,
         comment,

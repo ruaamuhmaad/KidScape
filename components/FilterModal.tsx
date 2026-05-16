@@ -6,94 +6,158 @@ import {
   Modal,
   TextInput,
   Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const FilterModal = ({ visible, onClose, onApply }: any) => {
   const [city, setCity] = useState('');
+  const [interest, setInterest] = useState('');
   const [age, setAge] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [rating, setRating] = useState(0);
 
+  const handleReset = () => {
+    setCity('');
+    setInterest('');
+    setAge('');
+    setMinPrice('');
+    setMaxPrice('');
+    setRating(0);
+    onApply({});
+    onClose();
+  };
+
+  const handleApply = () => {
+    onApply({
+      city,
+      interest,
+      age,
+      minPrice,
+      maxPrice,
+      rating,
+    });
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.overlay} onPress={onClose} />
-
-      <View style={styles.container}>
-        <View style={styles.dragLine} />
-
-        <Text style={styles.label}>City</Text>
-        <View style={styles.inputBox}>
-          <TextInput
-            placeholder="Select City"
-            placeholderTextColor="#999"
-            style={styles.cityInput}
-            value={city}
-            onChangeText={setCity}
-          />
-        </View>
-
-        <Text style={styles.label}>Select Age Group</Text>
-        <View style={styles.row}>
-          <Pressable
-            style={[styles.ageBtn, age === '5-9' && styles.active]}
-            onPress={() => setAge('5-9')}
-          >
-            <Text>5-9</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.ageBtn, age === '10-14' && styles.active]}
-            onPress={() => setAge('10-14')}
-          >
-            <Text>10-14</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.label}>Range Price</Text>
-        <View style={styles.row}>
-          <TextInput
-            placeholder="enter min price"
-            style={styles.priceInput}
-            value={minPrice}
-            onChangeText={setMinPrice}
-          />
-          <Text>To</Text>
-          <TextInput
-            placeholder="enter max price"
-            style={styles.priceInput}
-            value={maxPrice}
-            onChangeText={setMaxPrice}
-          />
-        </View>
-
-        <Text style={styles.label}>Rating</Text>
-        <View style={styles.row}>
-          {[1, 2, 3, 4, 5].map((r) => (
-            <Pressable
-              key={r}
-              style={[styles.starBox, rating >= r && styles.active]}
-              onPress={() => setRating(r)}
-            >
-              <Text>⭐</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <View style={styles.container}>
+          <View style={styles.dragLine} />
+          
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Filter Options</Text>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={24} color="#183B4E" />
             </Pressable>
-          ))}
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* City Search */}
+            <Text style={styles.label}>Location / City</Text>
+            <View style={styles.inputBox}>
+              <Ionicons name="location-outline" size={20} color="#999" />
+              <TextInput
+                placeholder="Search by city..."
+                placeholderTextColor="#999"
+                style={styles.input}
+                value={city}
+                onChangeText={setCity}
+              />
+            </View>
+
+            {/* Interest Search */}
+            <Text style={styles.label}>Category / Interest</Text>
+            <View style={styles.inputBox}>
+              <Ionicons name="sparkles-outline" size={20} color="#999" />
+              <TextInput
+                placeholder="Sports, Music, Art..."
+                placeholderTextColor="#999"
+                style={styles.input}
+                value={interest}
+                onChangeText={setInterest}
+              />
+            </View>
+
+            {/* Age Group */}
+            <Text style={styles.label}>Age Group</Text>
+            <View style={styles.ageGrid}>
+              {['3-5', '6-9', '10-12', '13-15'].map((group) => (
+                <Pressable
+                  key={group}
+                  style={[styles.ageBtn, age === group && styles.activeBtn]}
+                  onPress={() => setAge(age === group ? '' : group)}
+                >
+                  <Text style={[styles.ageBtnText, age === group && styles.activeBtnText]}>
+                    {group} years
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Price Range */}
+            <Text style={styles.label}>Price Range</Text>
+            <View style={styles.priceRow}>
+              <View style={styles.priceInputBox}>
+                <Text style={styles.priceSymbol}>$</Text>
+                <TextInput
+                  placeholder="Min"
+                  keyboardType="numeric"
+                  style={styles.priceInput}
+                  value={minPrice}
+                  onChangeText={setMinPrice}
+                />
+              </View>
+              <View style={styles.priceDivider} />
+              <View style={styles.priceInputBox}>
+                <Text style={styles.priceSymbol}>$</Text>
+                <TextInput
+                  placeholder="Max"
+                  keyboardType="numeric"
+                  style={styles.priceInput}
+                  value={maxPrice}
+                  onChangeText={setMaxPrice}
+                />
+              </View>
+            </View>
+
+            {/* Rating */}
+            <Text style={styles.label}>Minimum Rating</Text>
+            <View style={styles.ratingRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable
+                  key={star}
+                  onPress={() => setRating(rating === star ? 0 : star)}
+                  style={styles.starPressable}
+                >
+                  <Ionicons
+                    name={rating >= star ? "star" : "star-outline"}
+                    size={32}
+                    color={rating >= star ? "#FFD700" : "#CCC"}
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={styles.footer}>
+              <Pressable style={styles.resetBtn} onPress={handleReset}>
+                <Text style={styles.resetText}>Reset All</Text>
+              </Pressable>
+              <Pressable style={styles.applyBtn} onPress={handleApply}>
+                <Text style={styles.applyText}>Apply Filters</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </View>
-
-        <Pressable
-          style={styles.applyBtn}
-          onPress={() => {
-            onApply({ city, age, minPrice, maxPrice, rating });
-            onClose();
-          }}
-        >
-          <Text style={styles.applyText}>Apply Filter</Text>
-        </Pressable>
-
-        <Pressable onPress={onClose} style={styles.resetBtn}>
-          <Text style={styles.resetText}>Reset All</Text>
-        </Pressable>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -103,92 +167,163 @@ export default FilterModal;
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  container: {
+  keyboardView: {
     position: 'absolute',
     bottom: 0,
     width: '100%',
+  },
+  container: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     padding: 20,
+    maxHeight: '90%',
   },
   dragLine: {
-    width: 60,
-    height: 5,
-    backgroundColor: '#ccc',
-    borderRadius: 10,
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 10,
-    color: '#183B4E',
-  },
-  inputBox: {
-    backgroundColor: '#eee',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 5,
-  },
-  placeholder: {
-    color: '#999',
-  },
-  cityInput: {
-    color: '#183B4E',
-    padding: 0,
-  },
-  row: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#183B4E',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#183B4E',
+    marginTop: 15,
+    marginBottom: 8,
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  input: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#183B4E',
+  },
+  ageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   ageBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#183B4E',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 25,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+    minWidth: '47%',
+    alignItems: 'center',
   },
-  active: {
-    backgroundColor: '#DCE6F2',
+  activeBtn: {
+    backgroundColor: '#183B4E',
+    borderColor: '#183B4E',
+  },
+  ageBtnText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  activeBtnText: {
+    color: '#fff',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 15,
+    width: '45%',
+    paddingHorizontal: 12,
+    height: 50,
+  },
+  priceSymbol: {
+    color: '#999',
+    marginRight: 5,
+    fontWeight: '600',
   },
   priceInput: {
-    backgroundColor: '#eee',
-    borderRadius: 12,
-    padding: 10,
-    width: '40%',
+    flex: 1,
+    fontSize: 15,
+    color: '#183B4E',
   },
-  starBox: {
+  priceDivider: {
+    width: 10,
+    height: 1,
+    backgroundColor: '#CCC',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    marginTop: 5,
+  },
+  starPressable: {
+    padding: 2,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+    gap: 15,
+  },
+  resetBtn: {
+    flex: 1,
+    height: 55,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#183B4E',
-    borderRadius: 10,
-    padding: 8,
+    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resetText: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 16,
   },
   applyBtn: {
+    flex: 2,
+    height: 55,
+    borderRadius: 18,
     backgroundColor: '#183B4E',
-    padding: 15,
-    borderRadius: 25,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    shadowColor: '#183B4E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   applyText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  resetBtn: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 20,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  resetText: {
-    color: '#999',
+    fontSize: 16,
   },
 });
