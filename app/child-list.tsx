@@ -80,7 +80,14 @@ export default function ChildListScreen() {
         {isLoading ? <LoadingState /> : null}
         {!isLoading && statusMessage ? <StatusText message={statusMessage} /> : null}
         {!isLoading && !statusMessage
-          ? children.map((child) => <ChildCard key={child.id} child={child} />)
+          ? children.map((child) => (
+              <TouchableOpacity
+                key={child.id}
+                onPress={() => router.push(`/edit-child?id=${child.id}`)}
+              >
+                <ChildCard child={child} />
+              </TouchableOpacity>
+            ))
           : null}
 
         <TouchableOpacity
