@@ -5,7 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
+  ActivityIndicator
+   ,Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,12 +15,13 @@ import OverviewTab from "@/components/activity-details/OverviewTab";
 import DetailsTab from "@/components/activity-details/DetailsTab";
 import CostsTab from "@/components/activity-details/CostsTab";
 import ActivityTabs from "@/components/activity-details/ActivityTabs";
-import { getActivityById } from "@/firebase/activityDetailsService";
+import { getActivityById , toggleFavorite  } from "@/firebase/activityDetailsService";
 import React, { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import styles from "@/style/activityDetailsStyles";
 import { COLORS } from "@/constants/colors";
+import { getCurrentUser } from "@/firebase/login";
 import type {
   ActivityCost,
   ActivityDetailsRecord,
@@ -132,14 +134,18 @@ const toOverviewItems = (
     : [{ icon: "shield-checkmark", text: "Details will be available soon." }];
 };
 
-const toDetailsInfo = (raw: Record<string, unknown>): ActivityDetailsInfo => ({
-  description: asString(
-    raw.description ?? raw.details ?? raw.about,
-    "No description available yet."
-  ),
-  amenities: asStringArray(raw.amenities),
-  schedule: asString(raw.schedule, "Schedule will be shared soon."),
-});
+const toDetailsInfo = (raw: Record<string, unknown>): ActivityDetailsInfo => {
+  const details = isRecord(raw.details) ? raw.details : raw;
+
+  return {
+    description: asString(
+      details.description ?? details.about,
+      "No description available yet."
+    ),
+    amenities: asStringArray(details.amenities),
+    schedule: asString(details.schedule, "Schedule will be shared soon."),
+  };
+};
 
 const toCosts = (
   raw: Record<string, unknown>,
@@ -234,18 +240,26 @@ const normalizeActivityDetails = (value: unknown): ActivityDetailsRecord | null 
     reviews: toReviews(value),
   };
 };
-
 export default function ActivityDetailsScreen() {
-  const { id, source } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
   const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
   const [loading, setLoading] = useState(true);
-
+const [isFav, setIsFav] = useState<boolean>(false);
   const activityId = Array.isArray(id) ? id[0] : id;
-  const activitySource = (Array.isArray(source) ? source[0] : source) === "child" ? "child" : "guest";
-
+const handleFavoritePress = async () => {
+    if (!activityId) return;
+    const newVal: 0 | 1 = isFav ? 0 : 1;
+    setIsFav(!isFav);
+    try {
+      await toggleFavorite(String(activityId), newVal);
+    } catch (e) {
+      console.log("Toggle favorite error:", e);
+      setIsFav(isFav);
+    }
+  };
   const fetchActivity = useCallback(async () => {
     try {
       if (!activityId || typeof activityId !== "string") {
@@ -253,15 +267,18 @@ export default function ActivityDetailsScreen() {
         return;
       }
 
-      const data = await getActivityById(activityId, activitySource);
+      const data = await getActivityById(activityId);
       setActivity(normalizeActivityDetails(data));
+        if (data && typeof (data as any).isFavorite !== "undefined") {
+            setIsFav(Number((data as any).isFavorite) === 1);
+          }
     } catch (error) {
       console.log("Fetch activity error:", error);
       setActivity(null);
     } finally {
       setLoading(false);
     }
-  }, [activityId, activitySource]);
+  }, [activityId]);
 
   useEffect(() => {
     fetchActivity();
@@ -320,6 +337,13 @@ export default function ActivityDetailsScreen() {
         <Text style={styles.headerTitle}>Activity Details</Text>
 
         <View style={{ width: 30 }} />
+          <TouchableOpacity onPress={handleFavoritePress} style={styles.iconBtn}>
+            <Ionicons
+              name={isFav ? "heart" : "heart-outline"}
+              size={22}
+              color={isFav ? "#E05C5C" : "#1a1a1a"}
+            />
+          </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -353,14 +377,29 @@ export default function ActivityDetailsScreen() {
         <View style={styles.footer}>
           <PrimaryButton
             title="Registration Request"
-            onPress={() =>
-              router.push({
-                pathname: "/booking-form",
-                params: {
-                  activity: activity.title,
-                  activityId: activity.id,
-                },
-              })
+            onPress={() =>{
+                const user = getCurrentUser();
+
+                                if (!user) {
+                                  Alert.alert(
+                                    "Login Required",
+                                    "You must be logged in to register for this plan.",
+                                    [
+                                      { text: "Cancel", style: "cancel" },
+                                      { text: "Login", onPress: () => router.push("/login") },
+                                    ]
+                                  );
+                                  return;
+                                }
+                             router.push({
+                                            pathname: "/booking-form",
+                                            params: {
+                                              activity: activity.title,
+                                              activityId: activity.id,
+                                            },
+                                          })
+                }
+
             }
           />
         </View>

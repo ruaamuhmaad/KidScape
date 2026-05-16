@@ -36,6 +36,7 @@ export type ActivityDetailsRecord = {
   title: string;
   location: string;
   image: string;
+   isFavorite?: number;
   overview: ActivityOverviewItem[];
   details: ActivityDetailsInfo;
   costs: ActivityCost[];
