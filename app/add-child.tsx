@@ -4,18 +4,16 @@ import ChildFormCard, {
   type DropdownField,
 } from "@/components/ChildFormCard";
 import ProfileHeader from "@/components/ProfileHeader";
-import { addChildToFirebase } from "@/firebase";
-import {
-  getCurrentUserProfile,
-  type AuthenticatedUserProfile,
-} from "@/services/authService";
+import { useAddChild } from "@/hooks/useChildrenQueries";
+import { useCurrentProfile } from "@/hooks/useProfileQueries";
 import { calculateAge } from "@/utils/childDate";
 import {
   getErrorMessage,
   redirectToLoginIfNeeded,
 } from "@/utils/errorHandling";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -25,99 +23,85 @@ import {
 } from "react-native";
 
 export default function AddChildScreen() {
-  const [form, setForm] = useState<ChildFormValues>(EMPTY_CHILD_FORM);
+  const { control, handleSubmit } = useForm<ChildFormValues>({
+    defaultValues: EMPTY_CHILD_FORM,
+    mode: "onChange",
+  });
   const [openDropdown, setOpenDropdown] = useState<DropdownField | null>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [parentProfile, setParentProfile] =
-    useState<AuthenticatedUserProfile | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [submitErrorMessage, setSubmitErrorMessage] = useState("");
+  const parentProfileQuery = useCurrentProfile();
+  const addChildMutation = useAddChild();
 
   useEffect(() => {
-    let isMounted = true;
+    if (!parentProfileQuery.error) {
+      return;
+    }
 
-    const loadParentProfile = async () => {
-      try {
-        const profile = await getCurrentUserProfile();
-        if (isMounted) setParentProfile(profile);
-      } catch (error) {
-        const message = getErrorMessage(error, "Unable to load profile.");
-        if (isMounted) setErrorMessage(message);
-        redirectToLoginIfNeeded(message);
-      }
-    };
+    redirectToLoginIfNeeded(
+      getErrorMessage(parentProfileQuery.error, "Unable to load profile.")
+    );
+  }, [parentProfileQuery.error]);
 
-    void loadParentProfile();
-    return () => {
-      isMounted = false;
-    };
+  const toggleDropdown = useCallback((field: DropdownField) => {
+    setOpenDropdown((current) => (current === field ? null : field));
   }, []);
 
-  const updateForm = (key: keyof ChildFormValues, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
-
-  const toggleDropdown = (field: DropdownField) => {
-    setOpenDropdown((current) => (current === field ? null : field));
-  };
-
-  const selectDropdownValue = (field: DropdownField, value: string) => {
-    updateForm(field, value);
+  const closeDropdown = useCallback(() => {
     setOpenDropdown(null);
-  };
+  }, []);
 
-  const toggleInterest = (interest: string) => {
+  const toggleInterest = useCallback((interest: string) => {
     setSelectedInterests((current) =>
       current.includes(interest)
         ? current.filter((item) => item !== interest)
         : [...current, interest]
     );
-  };
+  }, []);
 
-  const handleCreate = async () => {
+  const errorMessage = useMemo(() => {
+    if (submitErrorMessage) {
+      return submitErrorMessage;
+    }
+
+    return parentProfileQuery.error
+      ? getErrorMessage(parentProfileQuery.error, "Unable to load profile.")
+      : "";
+  }, [parentProfileQuery.error, submitErrorMessage]);
+
+  const handleCreate = useCallback(async (form: ChildFormValues) => {
     const name = form.fullName.trim();
     const dateOfBirth = form.dateOfBirth.trim();
     const age = calculateAge(dateOfBirth);
 
-    if (!name || !form.city || !form.gender || !dateOfBirth) {
-      setErrorMessage("Please fill in all child information.");
-      return;
-    }
-
     if (age === null) {
-      setErrorMessage("Please enter a valid date of birth.");
+      setSubmitErrorMessage("Please enter a valid date of birth.");
       return;
     }
 
     try {
-      setIsSaving(true);
-      setErrorMessage("");
-
-      const profile = await getCurrentUserProfile();
-      if (!profile.permissions.includes("children:manage")) {
-        throw new Error("You do not have permission to manage children.");
-      }
-
-      await addChildToFirebase({
+      setSubmitErrorMessage("");
+      await addChildMutation.mutateAsync({
         name,
         age,
         city: form.city,
         gender: form.gender,
         dateOfBirth,
         interests: selectedInterests,
-        parentId: profile.uid,
       });
 
       Alert.alert("Saved", "Child added successfully.");
       router.replace("/child-list");
     } catch (error) {
       const message = getErrorMessage(error, "Unable to add child right now.");
-      setErrorMessage(message);
+      setSubmitErrorMessage(message);
       redirectToLoginIfNeeded(message);
-    } finally {
-      setIsSaving(false);
     }
-  };
+  }, [addChildMutation, selectedInterests]);
+
+  const submitForm = useCallback(() => {
+    void handleSubmit(handleCreate)();
+  }, [handleCreate, handleSubmit]);
 
   return (
     <KeyboardAvoidingView
@@ -127,22 +111,21 @@ export default function AddChildScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ProfileHeader
-          name={parentProfile?.PName || undefined}
-          imageUrl={parentProfile?.imageUrl || undefined}
+          name={parentProfileQuery.data?.PName || undefined}
+          imageUrl={parentProfileQuery.data?.imageUrl || undefined}
         />
 
         <ChildFormCard
-          form={form}
+          control={control}
           openDropdown={openDropdown}
           selectedInterests={selectedInterests}
-          isSaving={isSaving}
+          isSaving={addChildMutation.isPending}
           errorMessage={errorMessage}
-          onChange={updateForm}
           onToggleDropdown={toggleDropdown}
-          onSelectDropdown={selectDropdownValue}
+          onCloseDropdown={closeDropdown}
           onToggleInterest={toggleInterest}
           onCancel={() => router.push("/child-list")}
-          onCreate={handleCreate}
+          onCreate={submitForm}
         />
       </ScrollView>
     </KeyboardAvoidingView>

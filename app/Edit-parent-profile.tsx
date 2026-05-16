@@ -5,7 +5,10 @@ import {
   takePhotoWithCamera,
   uploadImageToCloudinary,
 } from "@/firebase";
-import { getCurrentUserProfile, updateCurrentUserProfile } from "@/services/authService";
+import {
+  useCurrentProfile,
+  useUpdateProfile,
+} from "@/hooks/useProfileQueries";
 import {
   getErrorMessage,
   redirectToLoginIfNeeded,
@@ -16,10 +19,12 @@ import {
   mapProfileToForm,
   PROFILE_FIELDS,
   type ProfileForm,
+  type ProfileInputKey,
 } from "@/utils/profileForm";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
   Alert,
@@ -30,93 +35,150 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextInputProps,
   TouchableOpacity,
   View,
 } from "react-native";
 
 type ImageGetter = () => Promise<ImagePickerAsset | null>;
 
+const getProfileFieldRules = (key: ProfileInputKey) => {
+  switch (key) {
+    case "email":
+      return {
+        required: "Email is required.",
+        pattern: {
+          value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+          message: "Please enter a valid email address.",
+        },
+      };
+    case "phone":
+    case "emergencyContact":
+      return {
+        required: "Phone number is required.",
+        pattern: {
+          value: /^[0-9+]{8,15}$/,
+          message: "Please enter a valid phone number.",
+        },
+      };
+    default:
+      return {
+        required: `${key === "parentName" ? "Parent name" : "Address"} is required.`,
+      };
+  }
+};
+
+const getProfileKeyboardType = (
+  key: ProfileInputKey
+): TextInputProps["keyboardType"] => {
+  if (key === "email") {
+    return "email-address";
+  }
+
+  if (key === "phone" || key === "emergencyContact") {
+    return "phone-pad";
+  }
+
+  return "default";
+};
+
 export default function Profile() {
-  const [form, setForm] = useState<ProfileForm>(EMPTY_PROFILE_FORM);
-  const [isLoading, setIsLoading] = useState(true);
+  const { control, getValues, handleSubmit, reset, setValue, watch } =
+    useForm<ProfileForm>({
+      defaultValues: EMPTY_PROFILE_FORM,
+      mode: "onChange",
+    });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [localErrorMessage, setLocalErrorMessage] = useState("");
+  const profileQuery = useCurrentProfile();
+  const updateProfileMutation = useUpdateProfile();
+  const profilePreview = watch();
 
   useEffect(() => {
-    let isMounted = true;
+    if (!profileQuery.data) {
+      return;
+    }
 
-    const loadParentData = async () => {
-      try {
-        const profile = await getCurrentUserProfile();
-        if (isMounted) {
-          setForm(mapProfileToForm(profile));
-          setErrorMessage("");
-        }
-      } catch (error) {
-        const message = getErrorMessage(
-          error,
-          "Unable to load your profile right now."
-        );
-        if (isMounted) setErrorMessage(message);
-        redirectToLoginIfNeeded(message);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
+    reset(mapProfileToForm(profileQuery.data));
+    setLocalErrorMessage("");
+  }, [profileQuery.data, reset]);
 
-    void loadParentData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const queryErrorMessage = useMemo(
+    () =>
+      profileQuery.error
+        ? getErrorMessage(
+            profileQuery.error,
+            "Unable to load your profile right now."
+          )
+        : "",
+    [profileQuery.error]
+  );
 
-  const updateField = (key: keyof ProfileForm, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
+  useEffect(() => {
+    if (queryErrorMessage) {
+      redirectToLoginIfNeeded(queryErrorMessage);
+    }
+  }, [queryErrorMessage]);
 
-  const saveProfile = (nextForm = form) =>
-    updateCurrentUserProfile(buildProfilePayload(nextForm));
+  const errorMessage = useMemo(() => {
+    if (localErrorMessage) {
+      return localErrorMessage;
+    }
 
-  const handleSave = async () => {
+    if (queryErrorMessage) {
+      return queryErrorMessage;
+    }
+
+    return updateProfileMutation.error
+      ? getErrorMessage(
+          updateProfileMutation.error,
+          "Unable to save your profile right now."
+        )
+      : "";
+  }, [localErrorMessage, queryErrorMessage, updateProfileMutation.error]);
+
+  const saveProfile = useCallback(
+    (nextForm: ProfileForm) =>
+      updateProfileMutation.mutateAsync(buildProfilePayload(nextForm)),
+    [updateProfileMutation]
+  );
+
+  const handleSave = useCallback(async (form: ProfileForm) => {
     try {
-      setIsSaving(true);
-      setErrorMessage("");
-      await saveProfile();
+      setLocalErrorMessage("");
+      await saveProfile(form);
       Alert.alert("Saved", "Profile updated successfully.");
       router.push("/profile");
     } catch (error) {
-      setErrorMessage(
+      setLocalErrorMessage(
         getErrorMessage(error, "Unable to save your profile right now.")
       );
-    } finally {
-      setIsSaving(false);
     }
-  };
+  }, [saveProfile]);
 
-  const selectAndUploadProfileImage = async (getImage: ImageGetter) => {
+  const selectAndUploadProfileImage = useCallback(async (getImage: ImageGetter) => {
     try {
       setIsUploadingImage(true);
-      setErrorMessage("");
+      setLocalErrorMessage("");
 
       const asset = await getImage();
       if (!asset) return;
 
       const imageUrl = await uploadImageToCloudinary(asset);
-      const nextForm = { ...form, imageUrl };
+      const nextForm = { ...getValues(), imageUrl };
 
-      setForm(nextForm);
+      setValue("imageUrl", imageUrl, { shouldDirty: true });
       await saveProfile(nextForm);
     } catch (error) {
-      setErrorMessage(
+      setLocalErrorMessage(
         getErrorMessage(error, "Unable to upload your profile photo right now.")
       );
     } finally {
       setIsUploadingImage(false);
     }
-  };
+  }, [getValues, saveProfile, setValue]);
 
-  const handlePickProfileImage = () => {
+  const handlePickProfileImage = useCallback(() => {
     Alert.alert("Profile photo", "Choose image source", [
       {
         text: "Gallery",
@@ -128,7 +190,11 @@ export default function Profile() {
       },
       { text: "Cancel", style: "cancel" },
     ]);
-  };
+  }, [selectAndUploadProfileImage]);
+
+  const submitProfile = useCallback(() => {
+    void handleSubmit(handleSave)();
+  }, [handleSave, handleSubmit]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -139,34 +205,45 @@ export default function Profile() {
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ProfileHeader
-            name={form.parentName || undefined}
-            imageUrl={form.imageUrl || undefined}
+            name={profilePreview.parentName || undefined}
+            imageUrl={profilePreview.imageUrl || undefined}
             onImagePress={handlePickProfileImage}
             isImageLoading={isUploadingImage}
           />
 
-          {isLoading ? <LoadingState /> : null}
-          {!isLoading && errorMessage ? (
+          {profileQuery.isLoading ? <LoadingState /> : null}
+          {!profileQuery.isLoading && errorMessage ? (
             <Text style={styles.statusText}>{errorMessage}</Text>
           ) : null}
 
           <View style={styles.form}>
             {PROFILE_FIELDS.map((field) => (
-              <ProfileField
+              <Controller
                 key={field.key}
-                label={field.label}
-                value={form[field.key]}
-                onChangeText={(value) => updateField(field.key, value)}
+                control={control}
+                name={field.key}
+                rules={getProfileFieldRules(field.key)}
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <ProfileField
+                    label={field.label}
+                    value={value}
+                    errorMessage={error?.message}
+                    keyboardType={getProfileKeyboardType(field.key)}
+                    onChangeText={onChange}
+                  />
+                )}
               />
             ))}
           </View>
 
           <TouchableOpacity
-            style={[styles.saveBtn, isSaving && styles.disabled]}
-            onPress={handleSave}
-            disabled={isSaving}
+            style={[styles.saveBtn, updateProfileMutation.isPending && styles.disabled]}
+            onPress={submitProfile}
+            disabled={updateProfileMutation.isPending}
           >
-            <Text style={styles.saveText}>{isSaving ? "Saving..." : "Save"}</Text>
+            <Text style={styles.saveText}>
+              {updateProfileMutation.isPending ? "Saving..." : "Save"}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -185,10 +262,18 @@ const LoadingState = () => (
 type ProfileFieldProps = {
   label: string;
   value: string;
+  errorMessage?: string;
+  keyboardType?: TextInputProps["keyboardType"];
   onChangeText: (value: string) => void;
 };
 
-const ProfileField = ({ label, value, onChangeText }: ProfileFieldProps) => (
+const ProfileField = ({
+  label,
+  value,
+  errorMessage,
+  keyboardType = "default",
+  onChangeText,
+}: ProfileFieldProps) => (
   <View style={styles.field}>
     <Text style={styles.fieldLabel}>{label}</Text>
     <TextInput
@@ -196,8 +281,11 @@ const ProfileField = ({ label, value, onChangeText }: ProfileFieldProps) => (
       onChangeText={onChangeText}
       placeholder={`Enter ${label}`}
       placeholderTextColor="#6C7A89"
+      keyboardType={keyboardType}
+      autoCapitalize={keyboardType === "email-address" ? "none" : "sentences"}
       style={styles.fieldInput}
     />
+    {errorMessage ? <Text style={styles.fieldErrorText}>{errorMessage}</Text> : null}
   </View>
 );
 
@@ -268,5 +356,10 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  fieldErrorText: {
+    color: "#B42318",
+    fontSize: 11,
   },
 });

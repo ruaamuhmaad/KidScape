@@ -2,12 +2,12 @@ import BottomNav from "@/components/bottom-nav";
 import ProfileActions from "@/components/ProfileActions";
 import ProfileHeader from "@/components/ProfileHeader";
 import ProfileMenu from "@/components/ProfileMenu";
+import { useCurrentProfile } from "@/hooks/useProfileQueries";
 import {
-  getCurrentUserProfile,
-  type AuthenticatedUserProfile,
-} from "@/services/authService";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+  getErrorMessage,
+  redirectToLoginIfNeeded,
+} from "@/utils/errorHandling";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -17,64 +17,33 @@ import {
 } from "react-native";
 
 export default function Profile() {
-  const [profile, setProfile] = useState<AuthenticatedUserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const profileQuery = useCurrentProfile();
+  const profile = profileQuery.data;
+  const errorMessage = profileQuery.error
+    ? getErrorMessage(
+        profileQuery.error,
+        "Unable to load your profile right now."
+      )
+    : "";
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadProfile = async () => {
-      try {
-        const userProfile = await getCurrentUserProfile();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setProfile(userProfile);
-        setErrorMessage("");
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to load your profile right now.";
-
-        setErrorMessage(message);
-
-        if (message.toLowerCase().includes("log in")) {
-          router.replace("/login" as any);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (errorMessage) {
+      redirectToLoginIfNeeded(errorMessage);
+    }
+  }, [errorMessage]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <ProfileHeader name={profile?.PName} imageUrl={profile?.imageUrl} />
 
-        {isLoading ? (
+        {profileQuery.isLoading ? (
           <View style={styles.statusContainer}>
             <ActivityIndicator color="#1E3A46" />
           </View>
         ) : null}
 
-        {!isLoading && errorMessage ? (
+        {!profileQuery.isLoading && errorMessage ? (
           <Text style={styles.statusText}>{errorMessage}</Text>
         ) : null}
 

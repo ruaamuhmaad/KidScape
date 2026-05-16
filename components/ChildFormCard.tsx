@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { type ComponentProps } from "react";
+import { Controller, type Control } from "react-hook-form";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -40,28 +41,26 @@ const INTEREST_OPTIONS: { label: string; icon: InterestIconName }[] = [
 ];
 
 type Props = {
-  form: ChildFormValues;
+  control: Control<ChildFormValues>;
   openDropdown: DropdownField | null;
   selectedInterests: string[];
   isSaving: boolean;
   errorMessage: string;
-  onChange: (key: keyof ChildFormValues, value: string) => void;
   onToggleDropdown: (field: DropdownField) => void;
-  onSelectDropdown: (field: DropdownField, value: string) => void;
+  onCloseDropdown: () => void;
   onToggleInterest: (interest: string) => void;
   onCancel: () => void;
   onCreate: () => void;
 };
 
 export default function ChildFormCard({
-  form,
+  control,
   openDropdown,
   selectedInterests,
   isSaving,
   errorMessage,
-  onChange,
   onToggleDropdown,
-  onSelectDropdown,
+  onCloseDropdown,
   onToggleInterest,
   onCancel,
   onCreate,
@@ -70,38 +69,88 @@ export default function ChildFormCard({
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>My child</Text>
 
-      <FormInput
-        label="Full name"
-        placeholder="enter child name"
-        value={form.fullName}
-        onChangeText={(value) => onChange("fullName", value)}
+      <Controller
+        control={control}
+        name="fullName"
+        rules={{
+          required: "Child name is required.",
+          minLength: {
+            value: 2,
+            message: "Child name must be at least 2 characters.",
+          },
+        }}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <FormInput
+            label="Full name"
+            placeholder="enter child name"
+            value={value}
+            errorMessage={error?.message}
+            onChangeText={onChange}
+          />
+        )}
       />
 
-      <SelectField
-        label="City"
-        placeholder="select city"
-        value={form.city}
-        options={CITY_OPTIONS}
-        isOpen={openDropdown === "city"}
-        onToggle={() => onToggleDropdown("city")}
-        onSelect={(value) => onSelectDropdown("city", value)}
+      <Controller
+        control={control}
+        name="city"
+        rules={{ required: "Please select a city." }}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <SelectField
+            label="City"
+            placeholder="select city"
+            value={value}
+            options={CITY_OPTIONS}
+            isOpen={openDropdown === "city"}
+            errorMessage={error?.message}
+            onToggle={() => onToggleDropdown("city")}
+            onSelect={(selectedValue) => {
+              onChange(selectedValue);
+              onCloseDropdown();
+            }}
+          />
+        )}
       />
 
-      <SelectField
-        label="Gender"
-        placeholder="select gender"
-        value={form.gender}
-        options={GENDER_OPTIONS}
-        isOpen={openDropdown === "gender"}
-        onToggle={() => onToggleDropdown("gender")}
-        onSelect={(value) => onSelectDropdown("gender", value)}
+      <Controller
+        control={control}
+        name="gender"
+        rules={{ required: "Please select a gender." }}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <SelectField
+            label="Gender"
+            placeholder="select gender"
+            value={value}
+            options={GENDER_OPTIONS}
+            isOpen={openDropdown === "gender"}
+            errorMessage={error?.message}
+            onToggle={() => onToggleDropdown("gender")}
+            onSelect={(selectedValue) => {
+              onChange(selectedValue);
+              onCloseDropdown();
+            }}
+          />
+        )}
       />
 
-      <FormInput
-        label="Date of birth"
-        placeholder="YYYY-MM-DD"
-        value={form.dateOfBirth}
-        onChangeText={(value) => onChange("dateOfBirth", value)}
+      <Controller
+        control={control}
+        name="dateOfBirth"
+        rules={{
+          required: "Date of birth is required.",
+          pattern: {
+            value: /^\d{4}-\d{2}-\d{2}$/,
+            message: "Use the YYYY-MM-DD format.",
+          },
+        }}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <FormInput
+            label="Date of birth"
+            placeholder="YYYY-MM-DD"
+            value={value}
+            errorMessage={error?.message}
+            onChangeText={onChange}
+          />
+        )}
       />
 
       <Text style={styles.label}>Interests & Hobbies</Text>
@@ -143,10 +192,17 @@ type FormInputProps = {
   label: string;
   placeholder: string;
   value: string;
+  errorMessage?: string;
   onChangeText: (value: string) => void;
 };
 
-const FormInput = ({ label, placeholder, value, onChangeText }: FormInputProps) => (
+const FormInput = ({
+  label,
+  placeholder,
+  value,
+  errorMessage,
+  onChangeText,
+}: FormInputProps) => (
   <View style={styles.inputContainer}>
     <Text style={styles.label}>{label}</Text>
     <TextInput
@@ -156,6 +212,7 @@ const FormInput = ({ label, placeholder, value, onChangeText }: FormInputProps) 
       placeholderTextColor="#6C7A89"
       style={styles.input}
     />
+    {errorMessage ? <Text style={styles.fieldErrorText}>{errorMessage}</Text> : null}
   </View>
 );
 
@@ -165,6 +222,7 @@ type SelectFieldProps = {
   value: string;
   options: string[];
   isOpen: boolean;
+  errorMessage?: string;
   onToggle: () => void;
   onSelect: (value: string) => void;
 };
@@ -175,6 +233,7 @@ const SelectField = ({
   value,
   options,
   isOpen,
+  errorMessage,
   onToggle,
   onSelect,
 }: SelectFieldProps) => (
@@ -206,6 +265,7 @@ const SelectField = ({
         </View>
       ) : null}
     </View>
+    {errorMessage ? <Text style={styles.fieldErrorText}>{errorMessage}</Text> : null}
   </>
 );
 
@@ -267,13 +327,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 0,
     fontSize: 12,
-    marginBottom: 12,
+    marginBottom: 6,
     paddingHorizontal: 15,
     paddingVertical: 10,
   },
 
   dropdownWrapper: {
-    marginBottom: 12,
+    marginBottom: 6,
   },
 
   dropdown: {
@@ -382,5 +442,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 12,
     textAlign: "center",
+  },
+
+  fieldErrorText: {
+    color: "#B42318",
+    fontSize: 11,
+    marginBottom: 8,
   },
 });

@@ -1,14 +1,13 @@
 import BottomNav from "@/components/bottom-nav";
 import ChildCard from "@/components/ChildCard";
-import { getChildrenByParentId, type ChildRecord } from "@/firebase";
-import { getCurrentUserProfile } from "@/services/authService";
+import { useCurrentParentChildren } from "@/hooks/useChildrenQueries";
 import {
   getErrorMessage,
   redirectToLoginIfNeeded,
 } from "@/utils/errorHandling";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -19,48 +18,33 @@ import {
   View,
 } from "react-native";
 
-const CHILDREN_PERMISSION = "children:manage";
-
 export default function ChildListScreen() {
-  const [children, setChildren] = useState<ChildRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const {
+    children,
+    isLoading,
+    isRefreshing,
+    error,
+    refetchChildren,
+  } = useCurrentParentChildren();
 
-  const loadChildren = useCallback(async (showLoading = false) => {
-    try {
-      if (showLoading) setIsLoading(true);
-      setErrorMessage("");
+  const errorMessage = error
+    ? getErrorMessage(error, "Unable to load children right now.")
+    : "";
 
-      const profile = await getCurrentUserProfile();
-      if (!profile.permissions.includes(CHILDREN_PERMISSION)) {
-        throw new Error("You do not have permission to manage children.");
-      }
-
-      setChildren(await getChildrenByParentId(profile.uid));
-    } catch (error) {
-      const message = getErrorMessage(
-        error,
-        "Unable to load children right now."
-      );
-      setChildren([]);
-      setErrorMessage(message);
-      redirectToLoginIfNeeded(message);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+  useEffect(() => {
+    if (errorMessage) {
+      redirectToLoginIfNeeded(errorMessage);
     }
-  }, []);
+  }, [errorMessage]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadChildren(true);
-    }, [loadChildren])
+      void refetchChildren();
+    }, [refetchChildren])
   );
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    void loadChildren();
+    void refetchChildren();
   };
 
   const statusMessage =
