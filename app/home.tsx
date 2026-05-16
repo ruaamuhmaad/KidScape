@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ActivityCard from '@/components/ActivityCard';
 import BottomNav from '@/components/bottom-nav';
 import ClubsCard from '@/components/clubsCard';
-import FilterModal from '@/components/FilterModal';
 import { HomeProvider, useHome } from '@/contexts/HomeContext';
 import { getCurrentUserProfile, onUserStateChange } from '@/services/authService';
 import { getChildrenByParentId, type ChildRecord } from '@/firebase';
@@ -54,8 +53,8 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const {
-    filteredActivities, filteredClubs, searchQuery, setSearchQuery, filterVisible,
-    openFilters, closeFilters, applyFilters, displayInterests, isLoading, isFetching,
+    filteredActivities, filteredClubs, searchQuery, setSearchQuery,
+    displayInterests, isLoading, isFetching,
     isError, errorMessage, refetchHomeData,
     activitySource,
     setActivitySource,
@@ -163,7 +162,6 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
             <View style={styles.searchBox}>
               <TextInput style={styles.searchInput} placeholder="search bar" placeholderTextColor="#183B4E"
                 value={searchQuery} onChangeText={setSearchQuery} />
-              <MaterialIcons name="tune" size={22} color="#728293" onPress={openFilters} />
             </View>
           </View>
 
@@ -231,7 +229,6 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
             )}
           </View>
         </View>
-        <FilterModal visible={filterVisible} onClose={closeFilters} onApply={applyFilters} />
       </ScrollView>
       {showBottomNav && <BottomNav />}
     </SafeAreaView>

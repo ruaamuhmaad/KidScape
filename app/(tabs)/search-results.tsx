@@ -6,12 +6,14 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FilterModal from '@/components/FilterModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAllActivitiesFromFirebase } from '@/firebase/firestoreService';
+import { getAllActivitiesFromFirebase, getAllClubsFromFirebase } from '@/firebase/firestoreService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SearchResults = () => {
   const router = useRouter();
@@ -20,14 +22,68 @@ const SearchResults = () => {
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  const HISTORY_KEY = '@search_history';
+
+  // Load history on mount
+  React.useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(HISTORY_KEY);
+        if (stored) {
+          setRecentSearches(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error('Failed to load search history');
+      }
+    };
+    loadHistory();
+  }, []);
+
+  const saveSearchQuery = async (query: string) => {
+    if (!query.trim()) return;
+    try {
+      const newHistory = [
+        query,
+        ...recentSearches.filter((item) => item.toLowerCase() !== query.toLowerCase()),
+      ].slice(0, 10);
+      setRecentSearches(newHistory);
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (e) {
+      console.error('Failed to save search history');
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      setRecentSearches([]);
+      await AsyncStorage.removeItem(HISTORY_KEY);
+    } catch (e) {
+      console.error('Failed to clear history');
+    }
+  };
 
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await getAllActivitiesFromFirebase();
-        setActivitiesData(data);
+        const [guestActivities, childActivities, clubs] = await Promise.all([
+          getAllActivitiesFromFirebase({}, 'guest'),
+          getAllActivitiesFromFirebase({}, 'child'),
+          getAllClubsFromFirebase(),
+        ]);
+        
+        const combined = [
+          ...guestActivities.map(a => ({ ...a, entityType: 'activity' })),
+          ...childActivities.map(a => ({ ...a, entityType: 'activity' })),
+          ...clubs.map(c => ({ ...c, entityType: 'club' })),
+        ];
+        
+        // Remove duplicates by id
+        const uniqueData = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setActivitiesData(uniqueData);
       } catch (error) {
-        console.error('Failed to load activities:', error);
+        console.error('Failed to load data:', error);
       } finally {
         setLoading(false);
       }
@@ -41,9 +97,16 @@ const SearchResults = () => {
  
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
+      const isClipsSearch = lowerQuery === 'كلبس' || lowerQuery === 'clubs' || lowerQuery === 'club';
+
       result = result.filter((item) =>
         item.title?.toLowerCase().includes(lowerQuery) ||
-        item.description?.toLowerCase().includes(lowerQuery)
+        item.description?.toLowerCase().includes(lowerQuery) ||
+        item.city?.toLowerCase().includes(lowerQuery) ||
+        item.location?.toLowerCase().includes(lowerQuery) ||
+        item.category?.toLowerCase().includes(lowerQuery) ||
+        (Array.isArray(item.interests) && item.interests.some((i: string) => i.toLowerCase().includes(lowerQuery))) ||
+        (isClipsSearch && (item.entityType === 'club' || item.title?.toLowerCase().includes('club')))
       );
     }
 
@@ -56,7 +119,7 @@ const SearchResults = () => {
       );
     }
 
-    // Filter by Interest
+   
     if (filters.interest) {
       const lowerInterest = filters.interest.toLowerCase();
       result = result.filter((item) => {
@@ -109,7 +172,7 @@ const SearchResults = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Search */}
+     
         <View style={styles.searchBox}>
           <MaterialIcons name="search" size={22} color="#183B4E" />
 
@@ -129,16 +192,52 @@ const SearchResults = () => {
           />
         </View>
 
-        <Text style={styles.subtitle}>your search results</Text>
+        {!searchQuery && recentSearches.length > 0 && (
+          <View style={styles.historyContainer}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.subtitle}>Recent Searches</Text>
+              <Pressable onPress={clearHistory}>
+                <Text style={styles.clearText}>Clear</Text>
+              </Pressable>
+            </View>
+            <View style={styles.historyList}>
+              {recentSearches.map((item, idx) => (
+                <Pressable
+                  key={idx}
+                  style={styles.historyItem}
+                  onPress={() => setSearchQuery(item)}
+                >
+                  <MaterialIcons name="history" size={18} color="#888" />
+                  <Text style={styles.historyText}>{item}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <Text style={styles.subtitle}>
+          {searchQuery ? 'your search results' : 'All available activities'}
+        </Text>
 
       
         <View style={styles.resultsList}>
           {loading ? (
             <Text style={{ textAlign: 'center', marginTop: 20 }}>Loading...</Text>
           ) : filteredData.map((item, index) => (
-            <View key={index} style={styles.card}>
+            <Pressable 
+              key={index} 
+              style={styles.card}
+              onPress={() => {
+                saveSearchQuery(searchQuery || item.title);
+                if (item.entityType === 'club') {
+                  router.push({ pathname: '/club-details', params: { id: item.id } });
+                } else {
+                  router.push(`/ActivityDetails/${item.id}`);
+                }
+              }}
+            >
               {item.imageUrl ? (
-                <View style={styles.image} /> 
+                <Image source={{ uri: item.imageUrl }} style={styles.image} />
               ) : (
                 <View style={styles.image} />
               )}
@@ -150,7 +249,7 @@ const SearchResults = () => {
                 </View>
                 <Text style={styles.desc}>{item.description || 'Description activity'}</Text>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
 
@@ -241,4 +340,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   desc: { color: '#888', fontSize: 13 },
+  historyContainer: {
+    marginBottom: 20,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  clearText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historyList: {
+    flexDirection: 'column',
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#EEE',
+  },
+  historyText: {
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#4B5C6B',
+  },
 });
