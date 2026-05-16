@@ -15,7 +15,7 @@ import OverviewTab from "@/components/activity-details/OverviewTab";
 import DetailsTab from "@/components/activity-details/DetailsTab";
 import CostsTab from "@/components/activity-details/CostsTab";
 import ActivityTabs from "@/components/activity-details/ActivityTabs";
-import { getActivityById , toggleFavorite  } from "@/firebase/activityDetailsService";
+import { getActivityById } from "@/firebase/activityDetailsService";
 import React, { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import PrimaryButton from "@/components/ui/PrimaryButton";
@@ -30,7 +30,7 @@ import type {
   ActivityReview,
   ActivityTabName,
 } from "@/components/activity-details/types";
-
+import { useFavorites } from "@/hooks/useFavorites";
 const BLUE = "#2C6E8A";
 const DARK = "#1a1a1a";
 const FALLBACK_IMAGE =
@@ -247,17 +247,19 @@ export default function ActivityDetailsScreen() {
   const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
   const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
   const [loading, setLoading] = useState(true);
-const [isFav, setIsFav] = useState<boolean>(false);
+  
   const activityId = Array.isArray(id) ? id[0] : id;
-const handleFavoritePress = async () => {
-    if (!activityId) return;
-    const newVal: 0 | 1 = isFav ? 0 : 1;
-    setIsFav(!isFav);
-    try {
-      await toggleFavorite(String(activityId), newVal);
-    } catch (e) {
-      console.log("Toggle favorite error:", e);
-      setIsFav(isFav);
+
+  const { favoriteIds, toggleFavorite, user } = useFavorites();
+  const isFavorite = typeof activityId === 'string' ? favoriteIds.includes(activityId) : false;
+
+  const handleToggleFavorite = () => {
+    if (!user) {
+      Alert.alert("Please log in to add to favorites");
+      return;
+    }
+    if (typeof activityId === 'string') {
+      toggleFavorite({ activityId, isFavorite });
     }
   };
   const fetchActivity = useCallback(async () => {
@@ -269,9 +271,6 @@ const handleFavoritePress = async () => {
 
       const data = await getActivityById(activityId);
       setActivity(normalizeActivityDetails(data));
-        if (data && typeof (data as any).isFavorite !== "undefined") {
-            setIsFav(Number((data as any).isFavorite) === 1);
-          }
     } catch (error) {
       console.log("Fetch activity error:", error);
       setActivity(null);
@@ -337,13 +336,9 @@ const handleFavoritePress = async () => {
         <Text style={styles.headerTitle}>Activity Details</Text>
 
         <View style={{ width: 30 }} />
-          <TouchableOpacity onPress={handleFavoritePress} style={styles.iconBtn}>
-            <Ionicons
-              name={isFav ? "heart" : "heart-outline"}
-              size={22}
-              color={isFav ? "#E05C5C" : "#1a1a1a"}
-            />
-          </TouchableOpacity>
+        <TouchableOpacity onPress={handleToggleFavorite} style={styles.iconBtn}>
+          <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? "#ff4d4d" : "#1a1a1a"} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
