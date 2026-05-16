@@ -10,6 +10,7 @@ export default function BottomNav() {
   const isHomeActive = pathname === "/" || pathname === "/home";
   const isFavouritesActive = pathname === "/favourites";
   const isNotificationsActive = pathname === "/notifications";
+  const isSearchActive = pathname === "/search-results";
   const isProfileActive =
     pathname === "/profile" ||
     pathname === "/Edit-parent-profile" ||
@@ -34,6 +35,20 @@ export default function BottomNav() {
           />
           <Text style={[styles.navText, isHomeActive && styles.navTextActive]}>
             Home
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/search-results")}
+        >
+          <Ionicons
+            name="search-outline"
+            size={22}
+            color={isSearchActive ? "#235671" : "#6C7A89"}
+          />
+          <Text style={[styles.navText, isSearchActive && styles.navTextActive]}>
+            Search
           </Text>
         </TouchableOpacity>
 
