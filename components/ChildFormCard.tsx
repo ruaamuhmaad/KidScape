@@ -1,10 +1,10 @@
-import CustomInput from "@/components/CustomInput";
 import { Ionicons } from "@expo/vector-icons";
 import { type ComponentProps } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -146,13 +146,17 @@ type FormInputProps = {
   onChangeText: (value: string) => void;
 };
 
-const FormInput = (props: FormInputProps) => (
-  <CustomInput
-    {...props}
-    labelStyle={styles.label}
-    inputStyle={styles.input}
-    containerStyle={styles.inputContainer}
-  />
+const FormInput = ({ label, placeholder, value, onChangeText }: FormInputProps) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#6C7A89"
+      style={styles.input}
+    />
+  </View>
 );
 
 type SelectFieldProps = {

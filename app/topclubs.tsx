@@ -1,29 +1,39 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, View, Text, StyleSheet, ScrollView, TextInput, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSearchParams } from 'expo-router/build/hooks';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ClubsCard from '@/components/clubsCard';
+import { fetchClubs, type Club } from '@/services/homeService';
 
 const TopClubsPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const clubs = searchParams.get('clubs');
+  const [clubsData, setClubsData] = useState<Club[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const clubsData = useMemo(() => {
-    if (!clubs) return [];
-    try {
-      return JSON.parse(clubs);
-    } catch {
-      return [];
-    }
-  }, [clubs]);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadClubs = async () => {
+      setLoading(true);
+      const clubs = await fetchClubs();
+      if (isMounted) {
+        setClubsData(clubs);
+        setLoading(false);
+      }
+    };
+
+    void loadClubs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredClubs = useMemo(() => {
     if (!searchQuery) return clubsData;
     const query = searchQuery.toLowerCase();
-    return clubsData.filter((club: any) => {
+    return clubsData.filter((club) => {
       return (
         club.title.toLowerCase().includes(query) ||
         club.details.toLowerCase().includes(query)
@@ -34,7 +44,7 @@ const TopClubsPage = () => {
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <View style={styles.appBar}>
-        <Pressable style={styles.backButton} onPress={() => router.push('/')}>
+        <Pressable style={styles.backButton} onPress={() => router.push('/home')}>
           <MaterialIcons name="arrow-back-ios" size={20} color="#183B4E" />
           <Text style={styles.backText}>Home</Text>
         </Pressable>
@@ -52,8 +62,13 @@ const TopClubsPage = () => {
         />
      
 
-      {filteredClubs.length > 0 ? (
-        filteredClubs.map((club: any, index: number) => (
+      {loading ? (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator color="#183B4E" />
+          <Text style={styles.loadingText}>Loading clubs...</Text>
+        </View>
+      ) : filteredClubs.length > 0 ? (
+        filteredClubs.map((club, index) => (
           <ClubsCard
             key={club.id ?? index}
             title={club.title}
@@ -63,12 +78,14 @@ const TopClubsPage = () => {
             onPress={() => router.push({
               pathname: '/club-details',
               params: { id: club.id },
-            })} location={''}          />
+            })}
+            location={club.location}
+          />
         ))
       ) : (
         <Text style={styles.emptyText}>
           {clubsData.length === 0
-            ? 'No clubs data received from Home page.'
+            ? 'No clubs found.'
             : 'No clubs match your search.'}
         </Text>
       )}
@@ -138,5 +155,16 @@ margin:19,
     fontSize: 16,
     marginTop: 20,
     textAlign: 'center',
+  },
+  loadingCard: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginTop: 20,
+    padding: 16,
+  },
+  loadingText: {
+    color: '#183B4E',
+    marginTop: 8,
   },
 });

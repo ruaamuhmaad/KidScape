@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -10,8 +10,42 @@ import FilterModal from '@/components/FilterModal';
 import { HomeProvider, useHome } from '@/contexts/HomeContext';
 import { getCurrentUserProfile, onUserStateChange } from '@/services/authService';
 import { getChildrenByParentId, type ChildRecord } from '@/firebase';
+import { type Activity } from '@/services/homeService';
 
 type HomePageProps = { showBottomNav?: boolean };
+
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const activityRecommendationValues = (activity: Activity) => [
+  activity.category,
+  activity.type,
+  activity.mood,
+  activity.emotion,
+  activity.status,
+  activity.targetMood,
+  activity.recommendedMood,
+  activity.title,
+  activity.description,
+  ...activity.tags,
+  ...activity.moods,
+  ...activity.emotions,
+  ...activity.categories,
+  ...activity.recommendedFor,
+].map(normalizeText).filter(Boolean);
+
+const matchesChildInterests = (activity: Activity, child: ChildRecord | undefined) => {
+  const childInterests = child?.interests?.map(normalizeText).filter(Boolean) ?? [];
+
+  if (!childInterests.length) {
+    return true;
+  }
+
+  const recommendationValues = activityRecommendationValues(activity);
+
+  return childInterests.some((interest) =>
+    recommendationValues.some((value) => value === interest || value.includes(interest) || interest.includes(value))
+  );
+};
 
 const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
   const router = useRouter();
@@ -20,33 +54,50 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const {
-    clubs, filteredActivities, filteredClubs, searchQuery, setSearchQuery, filterVisible,
+    filteredActivities, filteredClubs, searchQuery, setSearchQuery, filterVisible,
     openFilters, closeFilters, applyFilters, displayInterests, isLoading, isFetching,
     isError, errorMessage, refetchHomeData,
+    activitySource,
+    setActivitySource,
   } = useHome();
 
   const loadUserData = useCallback(async () => {
     try {
       const profile = await getCurrentUserProfile();
       setIsLoggedIn(true);
+      setActivitySource('child');
       setUserName(profile.PName || profile.Email || '');
       const parentChildren = await getChildrenByParentId(profile.uid);
       setChildren(parentChildren);
-      if (!selectedChildId && parentChildren.length > 0) setSelectedChildId(parentChildren[0].id);
+      const selectedChildStillExists = parentChildren.some((child) => child.id === selectedChildId);
+      if ((!selectedChildId || !selectedChildStillExists) && parentChildren.length > 0) {
+        setSelectedChildId(parentChildren[0].id);
+      }
     } catch {
-      setIsLoggedIn(false); setUserName(''); setChildren([]); setSelectedChildId(null);
+      setIsLoggedIn(false);
+      setActivitySource('guest');
+      setUserName('');
+      setChildren([]);
+      setSelectedChildId(null);
     }
-  }, [selectedChildId]);
+  }, [selectedChildId, setActivitySource]);
 
   useEffect(() => {
     let isMounted = true;
     const unsubscribe = onUserStateChange((user) => {
-      if (!isMounted || !user) { setIsLoggedIn(false); setUserName(''); setChildren([]); return; }
+      if (!isMounted || !user) {
+        setIsLoggedIn(false);
+        setActivitySource('guest');
+        setUserName('');
+        setChildren([]);
+        setSelectedChildId(null);
+        return;
+      }
       void loadUserData();
     });
     void loadUserData();
     return () => { isMounted = false; unsubscribe(); };
-  }, [loadUserData]);
+  }, [loadUserData, setActivitySource]);
 
   useFocusEffect(useCallback(() => { if (isLoggedIn) void loadUserData(); }, [isLoggedIn, loadUserData]));
 
@@ -60,6 +111,20 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
     }
     router.push('/add-child');
   };
+
+  const selectedChild = useMemo(
+    () => children.find((child) => child.id === selectedChildId),
+    [children, selectedChildId]
+  );
+
+  const shouldUseChildRecommendations = isLoggedIn && Boolean(selectedChild);
+
+  const recommendedActivities = useMemo(
+    () => shouldUseChildRecommendations
+      ? filteredActivities.filter((activity) => matchesChildInterests(activity, selectedChild))
+      : filteredActivities,
+    [filteredActivities, selectedChild, shouldUseChildRecommendations]
+  );
 
   if (isLoading) return (
     <SafeAreaView style={styles.page}>
@@ -114,30 +179,43 @@ const HomeContent = ({ showBottomNav = true }: HomePageProps) => {
 
           <Text style={styles.sectionTitle}>Common Interests</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {displayInterests.map((item, index) => (
-              <Pressable key={`${item}-${index}`} style={styles.interestCard}
-                onPress={() => router.push({ pathname: '/interest', params: { interest: item } })}>
-                <Text style={styles.interestCardLabel}>{item}</Text>
-              </Pressable>
-            ))}
+            {displayInterests.length ? (
+              displayInterests.map((item, index) => (
+                <Pressable key={`${item.title}-${index}`} style={styles.interestCard}
+                  onPress={() => router.push({ pathname: '/interest', params: { interest: item.title } })}>
+                  <Text style={styles.interestCardLabel}>{item.title}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={styles.emptyStateText}>No interests found in Firebase.</Text>
+            )}
           </ScrollView>
 
           <Text style={styles.sectionTitle}>Recommended Activities</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {filteredActivities.length ? (
-              filteredActivities.map((item, index) => (
+            {recommendedActivities.length ? (
+              recommendedActivities.map((item, index) => (
                 <ActivityCard key={item.id ?? index} {...item}
-                  onPress={() => router.push(`/ActivityDetails/${item.id}`)} />
+                  onPress={() =>
+                    router.push({
+                      pathname: '/ActivityDetails/[id]',
+                      params: { id: item.id, source: activitySource },
+                    })
+                  } />
               ))
             ) : (
-              <Text style={styles.emptyStateText}>No activities match the current search or filters.</Text>
+              <Text style={styles.emptyStateText}>
+                {shouldUseChildRecommendations && selectedChild
+                  ? `No recommended activities found for ${selectedChild.name}.`
+                  : 'No activities available from Firebase right now.'}
+              </Text>
             )}
           </ScrollView>
 
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Top-Best clubs in palestine</Text>
-              <Pressable onPress={() => router.push({ pathname: '/topclubs', params: { clubs: JSON.stringify(clubs) } })}
+              <Pressable onPress={() => router.push('/topclubs')}
                 style={styles.viewAllButton}>
                 <Text style={styles.viewAllText}>View All</Text>
               </Pressable>

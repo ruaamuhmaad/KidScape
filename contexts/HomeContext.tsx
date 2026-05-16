@@ -8,19 +8,9 @@ import {
 } from 'react';
 
 import { useHomeQueries } from '@/hooks/useHomeQueries';
-import { type Activity, type Club } from '@/services/homeService';
+import { type Activity, type ActivitySource, type Club, type Interest } from '@/services/homeService';
 
-const defaultInterests = [
-  'Sport',
-  'Art',
-  'Swimming',
-  'Football',
-  'Cooking',
-  'educational',
-  'Music',
-] as const;
-
-export type HomeFilters = {
+type HomeFilters = {
   city: string;
   age: string;
   minPrice: string;
@@ -39,17 +29,19 @@ const defaultHomeFilters: HomeFilters = {
 type HomeContextValue = {
   activities: Activity[];
   clubs: Club[];
-  interests: string[];
+  interests: Interest[];
   filteredActivities: Activity[];
   filteredClubs: Club[];
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  activitySource: ActivitySource;
+  setActivitySource: (source: ActivitySource) => void;
   filterVisible: boolean;
   openFilters: () => void;
   closeFilters: () => void;
   appliedFilters: HomeFilters;
   applyFilters: (filters: HomeFilters) => void;
-  displayInterests: string[];
+  displayInterests: Interest[];
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -96,6 +88,7 @@ const matchesRating = (minimumRating: number, value: string | number) => {
 
 export function HomeProvider({ children }: PropsWithChildren) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activitySource, setActivitySource] = useState<ActivitySource>('guest');
   const [filterVisible, setFilterVisible] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<HomeFilters>(defaultHomeFilters);
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -109,7 +102,7 @@ export function HomeProvider({ children }: PropsWithChildren) {
     isError,
     error,
     refetchHomeData,
-  } = useHomeQueries();
+  } = useHomeQueries(activitySource);
 
   const normalizedSearchQuery = normalizeText(deferredSearchQuery);
 
@@ -137,10 +130,7 @@ export function HomeProvider({ children }: PropsWithChildren) {
     [appliedFilters.city, appliedFilters.rating, clubs, normalizedSearchQuery]
   );
 
-  const displayInterests = useMemo(
-    () => (interests.length ? interests : [...defaultInterests]),
-    [interests]
-  );
+  const displayInterests = useMemo(() => interests, [interests]);
 
   const value = useMemo<HomeContextValue>(
     () => ({
@@ -151,6 +141,8 @@ export function HomeProvider({ children }: PropsWithChildren) {
       filteredClubs,
       searchQuery,
       setSearchQuery,
+      activitySource,
+      setActivitySource,
       filterVisible,
       openFilters: () => setFilterVisible(true),
       closeFilters: () => setFilterVisible(false),
@@ -168,6 +160,7 @@ export function HomeProvider({ children }: PropsWithChildren) {
     }),
     [
       activities,
+      activitySource,
       appliedFilters,
       clubs,
       displayInterests,
