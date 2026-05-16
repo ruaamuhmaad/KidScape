@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 
 import { getDb } from './config';
+import { sendNotification } from './notificationService';
 
 export interface ChildData {
   name: string;
@@ -222,6 +223,13 @@ export const addChildToFirebase = async (childData: ChildData) => {
     updatedAt: Timestamp.now(),
   });
 
+  await sendNotification(
+    childData.parentId,
+    "Child Added",
+    "New child added successfully",
+    "child_added"
+  );
+
   return docRef.id;
 };
 
@@ -245,13 +253,24 @@ export const addClubToFirebase = async (clubData: ClubData) => {
   return docRef.id;
 };
 
-export const updateChildInFirebase = async (childId: string, childData: Partial<ChildData>) => {
+export const updateChildInFirebase = async (
+  childId: string,
+  childData: Partial<ChildData>,
+  parentId: string
+) => {
   const db = getDb();
   const childRef = doc(db, 'children', childId);
   await updateDoc(childRef, {
     ...childData,
     updatedAt: Timestamp.now(),
   });
+
+  await sendNotification(
+    parentId,
+    "Child Updated",
+    "Child profile updated successfully",
+    "profile_updated"
+  );
 };
 
 export const deleteChildFromFirebase = async (childId: string) => {

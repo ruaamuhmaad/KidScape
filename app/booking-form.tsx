@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import { submitBooking } from "@/firebase/bookingService";
+import { getFirebaseAuth } from "@/firebase/config";
 
 export default function BookingFormScreen() {
   const router = useRouter();
@@ -40,7 +41,15 @@ export default function BookingFormScreen() {
     }
 
     try {
-      await submitBooking({
+      const auth = getFirebaseAuth();
+      const userId = auth.currentUser?.uid;
+
+      if (!userId) {
+        alert("You must be logged in to book an activity.");
+        return;
+      }
+
+      await submitBooking(userId, {
         activity: String(activity),
         parentName,
         phone,

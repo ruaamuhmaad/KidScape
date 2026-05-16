@@ -26,7 +26,7 @@ const SearchResults = () => {
 
   const HISTORY_KEY = '@search_history';
 
-  // Load history on mount
+ 
   React.useEffect(() => {
     const loadHistory = async () => {
       try {

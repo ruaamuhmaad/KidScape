@@ -8,6 +8,7 @@ import {
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import { getDb, getFirebaseAuth } from './config';
+import { sendNotification } from './notificationService';
 
 export const DEFAULT_PARENT_ROLE = 'parent';
 export const DEFAULT_PARENT_PERMISSIONS = [
@@ -240,6 +241,13 @@ export const updateCurrentUserProfile = async (
   if (displayName !== user.displayName || photoURL !== user.photoURL) {
     await updateProfile(user, { displayName, photoURL });
   }
+
+  await sendNotification(
+    user.uid,
+    "Profile Updated",
+    "Profile updated successfully",
+    "profile_updated"
+  );
 
   return getCurrentUserProfile();
 };
