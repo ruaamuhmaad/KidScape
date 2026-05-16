@@ -1,14 +1,14 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ImageBackground, ScrollView } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router } from '@/.expo/types/router';
 
 type ActivityCardProps = {
+  id?: string | number;
   title: string;
   location: string;
   rating: string | number;
   imageUrl?: string;
-  onPress?: () => void;
+ onPress: () => void;
 };
 
 const ActivityCard = ({ title, location, rating, imageUrl, onPress }: ActivityCardProps) => {

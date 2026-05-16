@@ -15,7 +15,7 @@ const TopClubsPage = () => {
     if (!clubs) return [];
     try {
       return JSON.parse(clubs);
-    } catch (error) {
+    } catch {
       return [];
     }
   }, [clubs]);
@@ -55,13 +55,15 @@ const TopClubsPage = () => {
       {filteredClubs.length > 0 ? (
         filteredClubs.map((club: any, index: number) => (
           <ClubsCard
-            key={index}
+            key={club.id ?? index}
             title={club.title}
             details={club.details}
             rating={club.rating}
             imageUrl={club.imageUrl}
-            onPress={() => console.log('Top club pressed', club.title)}
-          />
+            onPress={() => router.push({
+              pathname: '/club-details',
+              params: { id: club.id },
+            })} location={''}          />
         ))
       ) : (
         <Text style={styles.emptyText}>

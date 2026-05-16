@@ -1,23 +1,43 @@
-import React from 'react';
-import { Pressable, View, Text, StyleSheet, ImageBackground } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import React from 'react';
+import {
+  ImageBackground,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 type ClubCardProps = {
   title: string;
   details: string;
   rating: string | number;
   imageUrl?: string;
-  onPress?: () => void;
+  location: string;
+  onPress: () => void;
 };
 
-const ClubsCard = ({ title, details, rating, imageUrl, onPress }: ClubCardProps) => {
+const ClubsCard = ({
+  title,
+  details,
+  rating,
+  imageUrl,
+  location,
+  onPress,
+}: ClubCardProps) => {
   const backgroundImage = imageUrl
     ? { uri: imageUrl }
-    : { uri: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=800&q=80' };
+    : {
+        uri: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=800&q=80',
+      };
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <ImageBackground source={backgroundImage} style={styles.imageContainer} imageStyle={styles.imageStyle}>
+      <ImageBackground
+        source={backgroundImage}
+        style={styles.imageContainer}
+        imageStyle={styles.imageStyle}
+      >
         <View style={styles.imageOverlay} />
         <View style={styles.ratingBadge}>
           <MaterialIcons name="star" size={14} color="#fff" />
@@ -29,8 +49,8 @@ const ClubsCard = ({ title, details, rating, imageUrl, onPress }: ClubCardProps)
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.details}>{details}</Text>
         <View style={styles.locationRow}>
-          <MaterialIcons name="location-on" size={14} color="#183B4E" />
-          <Text style={styles.locationText}>{details}</Text>
+          <MaterialIcons name="location-on" size={14} color="#4e1818" />
+          <Text style={styles.locationText}>{location}</Text>
         </View>
       </View>
     </Pressable>
@@ -40,18 +60,17 @@ const ClubsCard = ({ title, details, rating, imageUrl, onPress }: ClubCardProps)
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    width:408,
-   height: 100,
+    width: 408,
+    height: 100,
     borderRadius: 20,
     overflow: 'hidden',
     marginTop: 16,
     backgroundColor: '#fff',
     shadowColor: '#000',
-  
   },
   imageContainer: {
     width: 100,
-    height:100,
+    height: 100,
     justifyContent: 'space-between',
   },
   imageStyle: {
@@ -97,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationText: {
-    color: '#728293',
+    color: '#183B4E',
     marginLeft: 6,
     fontSize: 13,
     fontWeight: '400',

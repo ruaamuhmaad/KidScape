@@ -38,6 +38,13 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow KidScape to access your photos so you can choose a profile picture.",
+          "cameraPermission": "Allow KidScape to access your camera so you can take a profile picture."
+        }
       ]
     ],
     "experiments": {
