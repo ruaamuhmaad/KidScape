@@ -64,7 +64,6 @@ export default function CostDetailsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={{
         flexDirection: "row",
         alignItems: "center",
@@ -84,7 +83,6 @@ export default function CostDetailsScreen() {
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
 
-        {/* Hero */}
         <View style={{ height: 200, justifyContent: "flex-end", padding: 16 }}>
           <Image
             source={{ uri: cost.image }}
@@ -101,7 +99,6 @@ export default function CostDetailsScreen() {
           </View>
         </View>
 
-        {/* Price */}
         <View style={{ padding: 16, borderBottomWidth: 0.5, borderBottomColor: "#e8e8e8" }}>
           <Text style={{ fontSize: 30, fontWeight: "700", color: "#1a1a1a" }}>{cost.price}</Text>
           <Text style={{ fontSize: 13, color: "#777", marginTop: 6, lineHeight: 20 }}>
@@ -109,7 +106,6 @@ export default function CostDetailsScreen() {
           </Text>
         </View>
 
-        {/* What's included */}
         <View style={{ padding: 16, borderBottomWidth: 0.5, borderBottomColor: "#e8e8e8" }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: "#999", letterSpacing: 0.5, marginBottom: 12, textTransform: "uppercase" }}>
             What's included
@@ -122,7 +118,6 @@ export default function CostDetailsScreen() {
           ))}
         </View>
 
-        {/* Schedule - 4 بطاقات */}
         <View style={{ padding: 16 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: "#999", letterSpacing: 0.5, marginBottom: 12, textTransform: "uppercase" }}>
             Schedule

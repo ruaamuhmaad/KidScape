@@ -157,50 +157,43 @@ export interface Interest {
 }
 
 export const fetchInterests = async (): Promise<Interest[]> => {
-  try {
-    const { data } = await api.get(HOME_API_ENDPOINTS.interests);
+  const { data } = await api.get(HOME_API_ENDPOINTS.interests);
 
-    if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) return [];
 
-    // If API returns simple strings, convert to Interest objects with id=title
-    if (data.every((item) => typeof item === 'string')) {
-      return data
-        .filter((item): item is string => typeof item === 'string')
-        .map((title) => ({ id: title, title }));
-    }
-
-    // Map object responses to Interest
-    const mapped = (data as InterestApiResponse[])
-      .map((item) => {
-        if (!item) return null;
-        const title = String(item.title ?? item.name ?? item.id ?? '');
-        if (!title) return null;
-        return {
-          id: String(item.id ?? title),
-          title,
-          imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
-          description: item.description ? String(item.description) : undefined,
-        } as Interest;
-      })
-      .filter((i): i is Interest => i !== null);
-
-    return mapped;
-  } catch (error) {
-    console.warn('Error fetching interests from Firebase API', error);
-    return [];
+  if (data.every((item) => typeof item === "string")) {
+    return data
+      .filter((item): item is string => typeof item === "string")
+      .map((title) => ({ id: title, title }));
   }
+
+  const mapped = (data as InterestApiResponse[])
+    .map((item) => {
+      if (!item) return null;
+
+      const title = String(item.title ?? item.name ?? item.id ?? "");
+
+      if (!title) return null;
+
+      return {
+        id: String(item.id ?? title),
+        title,
+        imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
+        description: item.description ? String(item.description) : undefined,
+      } as Interest;
+    })
+    .filter((i): i is Interest => i !== null);
+
+  return mapped;
 };
 
 export const fetchClubs = async (): Promise<Club[]> => {
-  try {
-    const { data } = await api.get<HomeClubApiResponse[]>(HOME_API_ENDPOINTS.clubs);
-    return Array.isArray(data) ? data.map(mapClub) : [];
-  } catch (error) {
-    console.warn('Error fetching clubs from API', error);
-    return [];
-  }
-};
+  const { data } = await api.get<HomeClubApiResponse[]>(
+    HOME_API_ENDPOINTS.clubs
+  );
 
+  return Array.isArray(data) ? data.map(mapClub) : [];
+};
 export const fetchClubById = async (id: string): Promise<Club | null> => {
   try {
     const { data } = await api.get<HomeClubApiResponse | null>(HOME_API_ENDPOINTS.clubDetails, {
@@ -213,17 +206,17 @@ export const fetchClubById = async (id: string): Promise<Club | null> => {
     return null;
   }
 };
-
-export const fetchActivities = async (source: ActivitySource = 'guest'): Promise<Activity[]> => {
-  try {
-    const { data } = await api.get<HomeActivityApiResponse[]>(HOME_API_ENDPOINTS.activities, {
+export const fetchActivities = async (
+  source: ActivitySource = "guest"
+): Promise<Activity[]> => {
+  const { data } = await api.get<HomeActivityApiResponse[]>(
+    HOME_API_ENDPOINTS.activities,
+    {
       params: { source },
-    });
-    return Array.isArray(data) ? data.map(mapActivity) : [];
-  } catch (error) {
-    console.warn('Error fetching activities from API', error);
-    return [];
-  }
+    }
+  );
+
+  return Array.isArray(data) ? data.map(mapActivity) : [];
 };
 
 export const fetchInterestPageData = async (

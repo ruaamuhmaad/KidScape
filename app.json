@@ -19,7 +19,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.ruamuhammad.KidScape"
     },
     "web": {
       "output": "static",
@@ -45,11 +49,18 @@
           "photosPermission": "Allow KidScape to access your photos so you can choose a profile picture.",
           "cameraPermission": "Allow KidScape to access your camera so you can take a profile picture."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f15b002b-7afb-490c-8676-3867ef3669ce"
+      }
     }
   }
 }

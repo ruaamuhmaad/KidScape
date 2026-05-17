@@ -118,6 +118,13 @@ const bookingFormStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
+errorText: {
+  color: "red",
+  fontSize: 12,
+  marginTop: -6,
+  marginBottom: 8,
+  marginLeft: 8,
+},
 });
 
 export default bookingFormStyles;

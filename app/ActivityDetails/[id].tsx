@@ -247,7 +247,7 @@ export default function ActivityDetailsScreen() {
   const [activeTab, setActiveTab] = useState<ActivityTabName>("Overview");
   const [activity, setActivity] = useState<ActivityDetailsRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const activityId = Array.isArray(id) ? id[0] : id;
 
   const { favoriteIds, toggleFavorite, user } = useFavorites();
