@@ -139,7 +139,6 @@ export default function CostDetailsScreen() {
 
       </ScrollView>
 
-      {/* Footer Button */}
       <View style={{
         paddingHorizontal: 16,
         paddingVertical: 12,

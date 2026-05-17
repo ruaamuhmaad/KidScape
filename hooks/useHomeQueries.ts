@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 
 import {
   fetchActivities,
@@ -41,87 +42,92 @@ type HomeData = {
 export const useHomeQueries = (
   activitySource: ActivitySource
 ): HomeQueriesResult => {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [clubs, setClubs] = useState<Club[]>([]);
-  const [interests, setInterests] = useState<Interest[]>([]);
+  const [cachedData, setCachedData] = useState<HomeData | null>(null);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const applyHomeData = useCallback((data: HomeData) => {
-    setActivities(data.activities);
-    setClubs(data.clubs);
-    setInterests(data.interests);
-  }, []);
-
-  const refetchHomeData = useCallback(async () => {
-    setIsFetching(true);
-    setIsError(false);
-    setError(null);
-
-    try {
-      const [firebaseActivities, firebaseClubs, firebaseInterests] =
-        await Promise.all([
-          fetchActivities(activitySource),
-          fetchClubs(),
-          fetchInterests(),
-        ]);
-
-      const freshData: HomeData = {
-        activities: firebaseActivities,
-        clubs: firebaseClubs,
-        interests: firebaseInterests,
-      };
-
-      applyHomeData(freshData);
-
-      await saveHomeCache(activitySource, freshData);
-    } catch (err) {
-      const cachedData = await loadHomeCache(activitySource);
-
-      if (cachedData) {
-        applyHomeData(cachedData);
-        setIsError(false);
-        setError(null);
-      } else {
-        setIsError(true);
-        setError(
-          err instanceof Error
-            ? err
-            : new Error("Failed to load home data")
-        );
-      }
-    } finally {
-      setIsLoading(false);
-      setIsFetching(false);
-    }
-  }, [activitySource, applyHomeData]);
+  const [activitiesQuery, clubsQuery, interestsQuery] = useQueries({
+    queries: [
+      {
+        queryKey: homeQueryKeys.activities(activitySource),
+        queryFn: () => fetchActivities(activitySource),
+      },
+      {
+        queryKey: homeQueryKeys.clubs,
+        queryFn: fetchClubs,
+      },
+      {
+        queryKey: homeQueryKeys.interests,
+        queryFn: fetchInterests,
+      },
+    ],
+  });
 
   useEffect(() => {
-    setIsLoading(true);
-    void refetchHomeData();
-  }, [refetchHomeData]);
+    async function loadCache() {
+      const data = await loadHomeCache(activitySource);
+      setCachedData(data);
+    }
+
+    void loadCache();
+  }, [activitySource]);
+
+  const activities = activitiesQuery.data ?? cachedData?.activities ?? [];
+  const clubs = clubsQuery.data ?? cachedData?.clubs ?? [];
+  const interests = interestsQuery.data ?? cachedData?.interests ?? [];
+
+  useEffect(() => {
+    const hasFreshData =
+      Boolean(activitiesQuery.data) &&
+      Boolean(clubsQuery.data) &&
+      Boolean(interestsQuery.data);
+
+    if (!hasFreshData) {
+      return;
+    }
+
+    void saveHomeCache(activitySource, {
+      activities: activitiesQuery.data ?? [],
+      clubs: clubsQuery.data ?? [],
+      interests: interestsQuery.data ?? [],
+    });
+  }, [
+    activitySource,
+    activitiesQuery.data,
+    clubsQuery.data,
+    interestsQuery.data,
+  ]);
+
+  const error =
+    [activitiesQuery.error, clubsQuery.error, interestsQuery.error].find(
+      (candidate): candidate is Error => candidate instanceof Error
+    ) ?? null;
+
+  const refetchHomeData = async () => {
+    await Promise.all([
+      activitiesQuery.refetch(),
+      clubsQuery.refetch(),
+      interestsQuery.refetch(),
+    ]);
+  };
+
+  const queries = [activitiesQuery, clubsQuery, interestsQuery];
 
   return useMemo(
     () => ({
       activities,
       clubs,
       interests,
-      isLoading,
-      isFetching,
-      isError,
-      error,
+      isLoading: queries.some((query) => query.isLoading) && !cachedData,
+      isFetching: queries.some((query) => query.isFetching),
+      isError: queries.some((query) => query.isError) && !cachedData,
+      error: cachedData ? null : error,
       refetchHomeData,
     }),
     [
       activities,
       clubs,
       interests,
-      isLoading,
-      isFetching,
-      isError,
+      queries,
+      cachedData,
       error,
       refetchHomeData,
     ]
